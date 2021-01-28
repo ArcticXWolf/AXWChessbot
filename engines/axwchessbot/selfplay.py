@@ -12,9 +12,9 @@ def play_self():
     while not board.is_game_over(claim_draw=True):
         move = None
         if board.turn:
-            move = search.Search(board, 4).next_move()
+            move, _ = search.Search(board, 4).next_move()
         else:
-            move = search.Search(board, 4).next_move()
+            move, _ = search.Search(board, 4).next_move()
 
         board.push(move)
         movehistory.append(move)

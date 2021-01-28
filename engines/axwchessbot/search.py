@@ -23,24 +23,29 @@ class Search:
     def next_move(self):
         move = self.next_move_by_opening_db()
         if move is not None:
-            return move
+            return (move, -1)
 
         move = self.next_move_by_ending_db()
         if move is not None:
-            return move
+            return (move, -2)
 
-        move = self.next_move_by_engine()
-        return move
+        move, num_positions = self.next_move_by_engine()
+        return (move, num_positions)
 
     def next_move_by_engine(self):
         best_score = -99999
         best_move = None
         alpha = -100000
         beta = 100000
+        analyzed_positions = 0
 
         for move in self.get_moves_by_value():
             self.board.push(move)
-            score = -self.alpha_beta_search(-beta, -alpha, self.max_depth - 1)
+            score, num_positions = self.alpha_beta_search(
+                -beta, -alpha, self.max_depth - 1
+            )
+            score = -score
+            analyzed_positions += num_positions
             if score > best_score:
                 best_score = score
                 best_move = move
@@ -48,29 +53,32 @@ class Search:
                 alpha = score
             self.board.pop()
 
-        return best_move
+        return (best_move, analyzed_positions)
 
     def alpha_beta_search(self, alpha: int, beta: int, depth_left: int = 0):
         best_score = -99999
+        analyzed_positions = 0
 
         if depth_left <= 0 or self.board.is_game_over():
-            return evaluation.Evaluation(self.board).evaluate()
+            return (evaluation.Evaluation(self.board).evaluate(), 1)
 
         for move in self.get_moves_by_value():
             self.board.push(move)
 
-            score = -self.alpha_beta_search(-beta, -alpha, depth_left - 1)
+            score, num_positions = self.alpha_beta_search(-beta, -alpha, depth_left - 1)
+            score = -score
+            analyzed_positions += num_positions
 
             self.board.pop()
 
             if score >= beta:
-                return score
+                return (score, analyzed_positions)
             if score > best_score:
                 best_score = score
             if score > alpha:
                 alpha = score
 
-        return best_score
+        return (best_score, analyzed_positions)
 
     def quiesce_search(self, alpha: int, beta: int):
         stand_pat = evaluation.Evaluation(self.board).evaluate()
@@ -114,7 +122,6 @@ class Search:
 
         try:
             current_wdl = tablebase.probe_wdl(self.board)
-            current_dtz = tablebase.probe_dtz(self.board)
             dtz_moves = {}
 
             for move in self.board.legal_moves:

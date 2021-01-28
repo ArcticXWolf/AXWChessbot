@@ -45,10 +45,14 @@ class Uci:
             return
 
         if msg[0:2] == "go":
-            move = search.Search(self.board, self.depth).next_move()
+            move, num_positions = search.Search(self.board, self.depth).next_move()
+            self.debug(f"Analyzed {num_positions} positions to get {move.uci()}")
             self.output(f"bestmove {move.uci()}")
             return
 
     def output(self, msg):
         print(msg)
         print(f"OUTPUT: {msg}", file=sys.stderr)
+
+    def debug(self, msg):
+        print(f"DEBUG: {msg}", file=sys.stderr)

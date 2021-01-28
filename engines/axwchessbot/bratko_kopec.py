@@ -78,7 +78,7 @@ def test_engine():
     for i in range(len(positions)):
         board = chess.Board(positions[i])
         start_search = timer()
-        move = search.Search(board, 4).next_move()
+        move, _ = search.Search(board, 4).next_move()
         end_search = timer()
 
         if str(board.san(move)) in str(solutions[i]):
