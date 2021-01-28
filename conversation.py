@@ -9,20 +9,31 @@ class Conversation:
     command_prefix = "!"
 
     def react(self, line, game):
-        print("*** {} [{}] {}: {}".format(self.game.url(), line.room, line.username, line.text.encode("utf-8")))
-        if (line.text[0] == self.command_prefix):
+        print(
+            "*** {} [{}] {}: {}".format(
+                self.game.url(), line.room, line.username, line.text.encode("utf-8")
+            )
+        )
+        if line.text[0] == self.command_prefix:
             self.command(line, game, line.text[1:].lower())
 
     def command(self, line, game, cmd):
         if cmd == "commands" or cmd == "help":
-            self.send_reply(line, "Supported commands: !name, !howto, !eval, !queue")
+            self.send_reply(
+                line,
+                f"Supported commands: !name, !howto, !eval, !queue. Room: {line.room}",
+            )
         elif cmd == "wait" and game.is_abortable():
             game.ping(60, 120)
             self.send_reply(line, "Waiting 60 seconds...")
         elif cmd == "name":
-            self.send_reply(line, "{} (lichess-bot v{})".format(self.engine.name(), self.version))
+            self.send_reply(
+                line, "{} (lichess-bot v{})".format(self.engine.name(), self.version)
+            )
         elif cmd == "howto":
-            self.send_reply(line, "How to run your own bot: lichess.org/api#tag/Chess-Bot")
+            self.send_reply(
+                line, "How to run your own bot: lichess.org/api#tag/Chess-Bot"
+            )
         elif cmd == "eval" and line.room == "spectator":
             stats = self.engine.get_stats()
             self.send_reply(line, ", ".join(stats))
@@ -30,7 +41,12 @@ class Conversation:
             self.send_reply(line, "I don't tell that to my opponent, sorry.")
         elif cmd == "queue":
             if self.challengers:
-                challengers = ", ".join(["@" + challenger.challenger_name for challenger in reversed(self.challengers)])
+                challengers = ", ".join(
+                    [
+                        "@" + challenger.challenger_name
+                        for challenger in reversed(self.challengers)
+                    ]
+                )
                 self.send_reply(line, "Challenge queue: {}".format(challengers))
             else:
                 self.send_reply(line, "No challenges queued.")
