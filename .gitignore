@@ -4,3 +4,4 @@ __pycache__
 /engines/*
 !/engines/axwchessbot
 !/engines/README.md
+.vscode
