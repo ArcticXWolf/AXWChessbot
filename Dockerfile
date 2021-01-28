@@ -8,4 +8,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python", "./lichess-bot.py", "-u", "-v"]
+CMD ["python", "./lichess-bot.py"]
