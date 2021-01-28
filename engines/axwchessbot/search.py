@@ -98,6 +98,9 @@ class Search:
                 .weighted_choice(self.board)
                 .move
             )
+            # fix error in which move is a function.
+            if callable(move):
+                move = move()
             return move
         except IndexError:
             return None
