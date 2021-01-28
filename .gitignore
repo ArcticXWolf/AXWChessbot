@@ -1,0 +1,6 @@
+config.yml
+__pycache__
+.venv
+/engines/*
+!/engines/axwchessbot
+!/engines/README.md
