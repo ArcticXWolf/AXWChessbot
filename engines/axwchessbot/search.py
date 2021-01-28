@@ -34,7 +34,7 @@ class Search:
 
     def next_move_by_engine(self):
         best_score = -99999
-        best_move = chess.Move.null()
+        best_move = None
         alpha = -100000
         beta = 100000
 
@@ -53,7 +53,7 @@ class Search:
     def alpha_beta_search(self, alpha: int, beta: int, depth_left: int = 0):
         best_score = -99999
 
-        if depth_left <= 0:
+        if depth_left <= 0 or self.board.is_game_over():
             return evaluation.Evaluation(self.board).evaluate()
 
         for move in self.get_moves_by_value():
@@ -124,8 +124,6 @@ class Search:
 
                 self.board.pop()
 
-            print(f"WDL: {current_wdl}, DTZ: {current_dtz}")
-            print(f"{dtz_moves}")
             if current_wdl >= 0:
                 best_index = min([i for i in dtz_moves.keys() if i > 0], default=0)
                 chosen_move = dtz_moves[best_index].pop()

@@ -74,12 +74,17 @@ class Evaluation:
             i: score_tables.piece_values[i]
             * (white_piece_counts[i] - black_piece_counts[i])
             for i in chess.PIECE_TYPES
+            if i != chess.KING
         }
 
         return sum(piece_scores.values())
 
     def get_pieces_counts(self, color: chess.Color) -> dict:
-        return {i: len(self.board.pieces(i, color)) for i in chess.PIECE_TYPES}
+        return {
+            i: len(self.board.pieces(i, color))
+            for i in chess.PIECE_TYPES
+            if i != chess.KING
+        }
 
     def move_value(self, move: chess.Move):
         if move.promotion is not None:
