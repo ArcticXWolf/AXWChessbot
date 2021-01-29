@@ -7,7 +7,7 @@ from timeit import default_timer as timer
 
 
 def play_self():
-    board = chess.Board()
+    board = chess.Board("3r2k1/ppp3pp/8/3bn1K1/2q5/8/4r3/8 b - - 9 44")
     movehistory = []
 
     while not board.is_game_over(claim_draw=True):
@@ -44,7 +44,7 @@ def play_self():
     game.headers["Black"] = "JNR Chess Engine"
     game.add_line(movehistory)
     game.headers["Result"] = str(board.result(claim_draw=True))
-    print(game)
+    # print(game)
     print(f"===================================")
     print(f"RESULT (Turn {board.turn})")
     print(board)

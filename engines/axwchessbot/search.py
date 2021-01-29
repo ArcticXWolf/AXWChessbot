@@ -37,53 +37,63 @@ class Search:
         return (move, num_positions)
 
     def next_move_by_engine(self):
-        best_score = -99999
-        best_move = None
         alpha = -100000
         beta = 100000
         analyzed_positions = 0
+        moves = []
 
         for move in self.get_moves_by_value():
             self.board.push(move)
-            score, num_positions = self.alpha_beta_search(
+            score, num_positions, depth = self.alpha_beta_search(
                 -beta, -alpha, self.alpha_beta_depth - 1
             )
             score = -score
             analyzed_positions += num_positions
-            if score > best_score:
-                best_score = score
-                best_move = move
+            moves.append((move, score, depth))
             if score > alpha:
                 alpha = score
             self.board.pop()
 
-        return (best_move, analyzed_positions)
+        sort_depth = self.alpha_beta_depth
+
+        def sort_function(move_eval):
+            if move_eval[1] == 9999:
+                return (move_eval[1], sort_depth - move_eval[2])
+            return (move_eval[1], 1)
+
+        moves_ordered = sorted(moves, reverse=True, key=sort_function)
+        print(moves_ordered)
+        return (moves_ordered.pop(0)[0], analyzed_positions)
 
     def alpha_beta_search(self, alpha: int, beta: int, depth_left: int = 0):
         best_score = -99999
         analyzed_positions = 0
+        best_move_depth = 0
 
         if depth_left <= 0 or self.board.is_game_over():
-            return (self.quiesce_search(alpha, beta, self.quiesce_depth - 1), 1)
+            return (self.quiesce_search(alpha, beta, self.quiesce_depth - 1), 1, 0)
             # return (evaluation.Evaluation(self.board).evaluate(), 1)
 
         for move in self.get_moves_by_value():
             self.board.push(move)
 
-            score, num_positions = self.alpha_beta_search(-beta, -alpha, depth_left - 1)
+            score, num_positions, depth = self.alpha_beta_search(
+                -beta, -alpha, depth_left - 1
+            )
             score = -score
             analyzed_positions += num_positions
 
             self.board.pop()
 
             if score >= beta:
-                return (score, analyzed_positions)
+                return (score, analyzed_positions, depth)
             if score > best_score:
                 best_score = score
+                best_move_depth = depth
             if score > alpha:
                 alpha = score
 
-        return (best_score, analyzed_positions)
+        return (best_score, analyzed_positions, best_move_depth + 1)
 
     def quiesce_search(self, alpha: int, beta: int, depth_left: int = 0):
 
