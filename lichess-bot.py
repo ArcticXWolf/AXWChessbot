@@ -190,17 +190,20 @@ def start(li, user_profile, engine_factory, config):
                         logger.info("    Skip missing {}".format(chlng))
                     queued_processes -= 1
 
-            if queued_processes == 0 and busy_processes == 0:
-                if ai_timer is None:
-                    ai_timer = timer()
-                elif timer() - ai_timer >= 20:
-                    logger.info("+++ I could start a bot game right now... ZZZzzz...")
-                    logger.info("+++ I do it now.")
-                    li.challenge_ai(ai_level + 1, 300, 3, "random")
-                    ai_level = (ai_level + 1) % 8
+            if config.get("automatic_challenge", False):
+                if queued_processes == 0 and busy_processes == 0:
+                    if ai_timer is None:
+                        ai_timer = timer()
+                    elif timer() - ai_timer >= 20:
+                        logger.info(
+                            "+++ I could start a bot game right now... ZZZzzz..."
+                        )
+                        logger.info("+++ I do it now.")
+                        li.challenge_ai(ai_level + 1, 300, 3, "random")
+                        ai_level = (ai_level + 1) % 8
+                        ai_timer = None
+                else:
                     ai_timer = None
-            else:
-                ai_timer = None
 
     logger.info("Terminated")
     control_stream.terminate()
