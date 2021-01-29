@@ -1,11 +1,46 @@
 import sys
 import chess
 import search
+from timeit import default_timer as timer
+
+
+class GoCommandArgs:
+    has_args = False
+    has_timing_info = False
+    time = {chess.WHITE: None, chess.BLACK: None}
+    inc = {chess.WHITE: None, chess.BLACK: None}
+
+    def __init__(self, line: str):
+        if len(line) <= 2:
+            return
+
+        self.has_args = True
+        args = iter(line[3:].split(" "))
+        try:
+            for arg in args:
+                if arg == "wtime":
+                    self.time[chess.WHITE] = int(next(args, None))
+                if arg == "btime":
+                    self.time[chess.BLACK] = int(next(args, None))
+                if arg == "winc":
+                    self.inc[chess.WHITE] = int(next(args, None))
+                if arg == "binc":
+                    self.inc[chess.BLACK] = int(next(args, None))
+        except:
+            pass
+
+        self.has_timing_info = (
+            self.time[chess.WHITE] is not None
+            and self.time[chess.BLACK] is not None
+            and self.inc[chess.WHITE] is not None
+            and self.inc[chess.BLACK] is not None
+        )
 
 
 class Uci:
-    def __init__(self, depth):
-        self.depth = depth
+    def __init__(self, abdepth, qdepth=10):
+        self.abdepth = abdepth
+        self.qdepth = qdepth
         self.board = chess.Board()
 
     def communicate(self):
@@ -45,8 +80,18 @@ class Uci:
             return
 
         if msg[0:2] == "go":
-            move, num_positions = search.Search(self.board, self.depth).next_move()
-            self.debug(f"Analyzed {num_positions} positions to get {move.uci()}")
+            go_args = GoCommandArgs(msg)
+            if go_args.has_args and go_args.has_timing_info:
+                self.set_depth_by_timing(go_args)
+
+            start_search = timer()
+            move, num_positions = search.Search(
+                self.board, self.abdepth, self.qdepth
+            ).next_move()
+            end_search = timer()
+            self.debug(
+                f"Analyzed {num_positions} positions in {end_search - start_search :.2f} sec at depths ({self.abdepth}, {self.qdepth})"
+            )
             self.output(f"bestmove {move.uci()}")
             return
 
@@ -56,3 +101,14 @@ class Uci:
 
     def debug(self, msg):
         print(f"DEBUG: {msg}", file=sys.stderr)
+
+    def set_depth_by_timing(self, go_args: GoCommandArgs):
+        if go_args.time[self.board.turn] > 60000:
+            self.abdepth = 3
+            self.qdepth = 10
+        elif go_args.time[self.board.turn] > 10000:
+            self.abdepth = 2
+            self.qdepth = 5
+        else:
+            self.abdepth = 1
+            self.qdepth = 2

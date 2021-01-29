@@ -3,6 +3,7 @@ import chess
 import chess.pgn
 import evaluation
 import search
+from timeit import default_timer as timer
 
 
 def play_self():
@@ -11,17 +12,22 @@ def play_self():
 
     while not board.is_game_over(claim_draw=True):
         move = None
+        start_search = end_search = None
         if board.turn:
-            move, _ = search.Search(board, 4).next_move()
+            start_search = timer()
+            move, _ = search.Search(board, 3).next_move()
+            end_search = timer()
         else:
-            move, _ = search.Search(board, 4).next_move()
+            start_search = timer()
+            move, _ = search.Search(board, 3).next_move()
+            end_search = timer()
 
         board.push(move)
         movehistory.append(move)
 
         print(f"===================================")
         print(f'-------------- {"WHITE" if board.turn else "BLACK" } --------------')
-        print(f"The move was {move}")
+        print(f"The move was {move} (took {end_search - start_search :.2f} sec)")
         print(board)
         print(
             f"Evaluation result in this position: {evaluation.Evaluation(board).evaluate()}"
@@ -39,6 +45,14 @@ def play_self():
     game.add_line(movehistory)
     game.headers["Result"] = str(board.result(claim_draw=True))
     print(game)
+    print(f"===================================")
+    print(f"RESULT (Turn {board.turn})")
+    print(board)
+    print(
+        f"Evaluation result in this position: {evaluation.Evaluation(board).evaluate()}"
+    )
+    print(f"===================================")
+    print("")
 
 
 if __name__ == "__main__":

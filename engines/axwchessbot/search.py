@@ -7,7 +7,8 @@ import os
 
 class Search:
     board = chess.Board()
-    max_depth = 2
+    alpha_beta_depth = 2
+    quiesce_depth = 10
     opening_db_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "opening_db/Perfect2017-SF12.bin"
     )
@@ -16,9 +17,12 @@ class Search:
     )
     ending_piece_count = 5
 
-    def __init__(self, board: chess.Board, max_depth: int = 2):
+    def __init__(
+        self, board: chess.Board, alpha_beta_depth: int = 2, quiesce_depth: int = 10
+    ):
         self.board = board
-        self.max_depth = max_depth
+        self.alpha_beta_depth = alpha_beta_depth
+        self.quiesce_depth = quiesce_depth
 
     def next_move(self):
         move = self.next_move_by_opening_db()
@@ -42,7 +46,7 @@ class Search:
         for move in self.get_moves_by_value():
             self.board.push(move)
             score, num_positions = self.alpha_beta_search(
-                -beta, -alpha, self.max_depth - 1
+                -beta, -alpha, self.alpha_beta_depth - 1
             )
             score = -score
             analyzed_positions += num_positions
@@ -60,7 +64,8 @@ class Search:
         analyzed_positions = 0
 
         if depth_left <= 0 or self.board.is_game_over():
-            return (evaluation.Evaluation(self.board).evaluate(), 1)
+            return (self.quiesce_search(alpha, beta, self.quiesce_depth - 1), 1)
+            # return (evaluation.Evaluation(self.board).evaluate(), 1)
 
         for move in self.get_moves_by_value():
             self.board.push(move)
@@ -80,23 +85,25 @@ class Search:
 
         return (best_score, analyzed_positions)
 
-    def quiesce_search(self, alpha: int, beta: int):
+    def quiesce_search(self, alpha: int, beta: int, depth_left: int = 0):
+
         stand_pat = evaluation.Evaluation(self.board).evaluate()
         if stand_pat >= beta:
             return beta
         if alpha < stand_pat:
             alpha = stand_pat
 
-        for move in self.get_moves_by_value():
-            if self.board.is_capture(move):
-                self.board.push(move)
-                score = -self.quiesce_search(-beta, -alpha)
-                self.board.pop()
+        if depth_left > 0 or not self.board.is_game_over():
+            for move in self.get_captures_by_value():
+                if self.board.is_capture(move):
+                    self.board.push(move)
+                    score = -self.quiesce_search(-beta, -alpha, depth_left - 1)
+                    self.board.pop()
 
-                if score >= beta:
-                    return beta
-                if score > alpha:
-                    alpha = score
+                    if score >= beta:
+                        return beta
+                    if score > alpha:
+                        alpha = score
         return alpha
 
     def next_move_by_opening_db(self):
@@ -150,8 +157,20 @@ class Search:
         return chosen_move
 
     def get_moves_by_value(self):
+        is_endgame = evaluation.Evaluation(self.board).check_if_endgame()
+
         def sort_function(move):
-            return evaluation.Evaluation(self.board).move_value(move)
+            return evaluation.Evaluation(self.board).move_value(move, is_endgame)
 
         moves_ordered = sorted(self.board.legal_moves, key=sort_function, reverse=True)
         return list(moves_ordered)
+
+    def get_captures_by_value(self):
+        def sort_function(move):
+            return evaluation.Evaluation(self.board).capture_value(move)
+
+        captures = [
+            move for move in self.board.legal_moves if self.board.is_capture(move)
+        ]
+        captures_ordered = sorted(captures, key=sort_function, reverse=True)
+        return list(captures_ordered)
