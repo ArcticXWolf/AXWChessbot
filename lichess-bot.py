@@ -204,7 +204,7 @@ def start(li, user_profile, engine_factory, config):
                     elif timer() - automatic_challenge_timer >= config.get(
                         "automatic_challenge_timer", 1800
                     ):
-                        do_automatic_challenge(li, bots)
+                        do_automatic_challenge(li, bots_list)
                         automatic_challenge_timer = None
                 else:
                     automatic_challenge_timer = None
