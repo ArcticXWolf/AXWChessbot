@@ -103,7 +103,10 @@ class Uci:
         print(f"DEBUG: {msg}", file=sys.stderr)
 
     def set_depth_by_timing(self, go_args: GoCommandArgs):
-        if go_args.time[self.board.turn] > 60000:
+        if go_args.time[self.board.turn] > 300000:
+            self.abdepth = 4
+            self.qdepth = 10
+        elif go_args.time[self.board.turn] > 120000:
             self.abdepth = 3
             self.qdepth = 10
         elif go_args.time[self.board.turn] > 10000:

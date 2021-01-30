@@ -15,6 +15,7 @@ import time
 from timeit import default_timer as timer
 import backoff
 import threading
+import random
 from config import load_config
 from conversation import Conversation, ChatLine
 from functools import partial
@@ -80,19 +81,24 @@ def watch_control_stream(control_queue, li):
 def start(li, user_profile, engine_factory, config):
     challenge_config = config["challenge"]
     max_games = challenge_config.get("concurrency", 1)
-    logger.info(
-        "You're now connected to {} and awaiting challenges.".format(config["url"])
-    )
     manager = multiprocessing.Manager()
     challenge_queue = manager.list()
     control_queue = manager.Queue()
+    bots_list = manager.list()
+    load_bots_stream = multiprocessing.Process(
+        target=load_bot_list, args=[li, bots_list]
+    )
+    load_bots_stream.start()
+    logger.info(
+        "You're now connected to {} and awaiting challenges.".format(config["url"])
+    )
     control_stream = multiprocessing.Process(
         target=watch_control_stream, args=[control_queue, li]
     )
     control_stream.start()
     busy_processes = 0
     queued_processes = 0
-    ai_timer = None
+    automatic_challenge_timer = None
     ai_level = 0
 
     with logging_pool.LoggingPool(max_games + 1) as pool:
@@ -137,10 +143,11 @@ def start(li, user_profile, engine_factory, config):
                             not chlng.challenger_is_bot
                         ):
                             reason = "onlyBot"
-                        li.decline_challenge(chlng.id, reason=reason)
                         logger.info(
                             "    Decline {} for reason '{}'".format(chlng, reason)
                         )
+                        li.decline_challenge(chlng.id, reason=reason)
+
                     except Exception:
                         pass
             elif event["type"] == "gameStart":
@@ -192,18 +199,15 @@ def start(li, user_profile, engine_factory, config):
 
             if config.get("automatic_challenge", False):
                 if queued_processes == 0 and busy_processes == 0:
-                    if ai_timer is None:
-                        ai_timer = timer()
-                    elif timer() - ai_timer >= 20:
-                        logger.info(
-                            "+++ I could start a bot game right now... ZZZzzz..."
-                        )
-                        logger.info("+++ I do it now.")
-                        li.challenge_ai(ai_level + 1, 300, 3, "random")
-                        ai_level = (ai_level + 1) % 8
-                        ai_timer = None
+                    if automatic_challenge_timer is None:
+                        automatic_challenge_timer = timer()
+                    elif timer() - automatic_challenge_timer >= config.get(
+                        "automatic_challenge_timer", 1800
+                    ):
+                        do_automatic_challenge(li, bots)
+                        automatic_challenge_timer = None
                 else:
-                    ai_timer = None
+                    automatic_challenge_timer = None
 
     logger.info("Terminated")
     control_stream.terminate()
@@ -624,6 +628,48 @@ def update_board(board, move):
     else:
         logger.debug("Ignoring illegal move {} on board {}".format(move, board.fen()))
     return board
+
+
+def load_bot_list(li, bots) -> list:
+    teams = ["lichess-bots"]
+    logger.info(f"+++ Loading bots from groups {teams}")
+    for team in teams:
+        players = li.get_team_members(team)
+        for player in players:
+            if "title" in player and player["title"] == "BOT":
+                bots.append(player["username"])
+
+    logger.info(f"+++ Loaded bots {len(bots)}.")
+    return bots
+
+
+def do_automatic_challenge(li, bots_list):
+    def grouper(n, iterable):
+        "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+        args = [iter(iterable)] * n
+        return zip(*args)
+
+    if bots_list and len(bots_list) > 0:
+        logger.info(
+            f"+++ Searching for bot to challenge ({len(bots_list)} bots known)."
+        )
+        bots = bots_list.copy()
+        random.shuffle(bots)
+        for bot_batch in list(grouper(200, bots)):
+            infos = li.get_users(bot_batch)
+            time.sleep(2)
+            for bot in infos:
+                if bot["online"]:
+                    logger.info(f"+++ Challenging: {bot['username']}")
+                    try:
+                        result = li.challenge_player(
+                            bot["username"], "true", 300, 3, "random"
+                        )
+                    except HTTPError as e:
+                        logger.info(str(e.response.content))
+                    return
+    else:
+        logger.info(f"+++ Bots not loaded. ")
 
 
 def intro():

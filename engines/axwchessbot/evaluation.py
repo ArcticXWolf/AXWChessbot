@@ -103,6 +103,8 @@ class Evaluation:
     def check_if_endgame(self) -> bool:
         queens_white = len(self.board.pieces(chess.QUEEN, chess.WHITE))
         queens_black = len(self.board.pieces(chess.QUEEN, chess.BLACK))
+        rooks_white = len(self.board.pieces(chess.ROOK, chess.WHITE))
+        rooks_black = len(self.board.pieces(chess.ROOK, chess.BLACK))
         minors_white = len(self.board.pieces(chess.BISHOP, chess.WHITE)) + len(
             self.board.pieces(chess.KNIGHT, chess.WHITE)
         )
@@ -110,9 +112,14 @@ class Evaluation:
             self.board.pieces(chess.KNIGHT, chess.BLACK)
         )
 
-        return (queens_white + queens_black == 0) or (
-            (queens_white == 0 or minors_white <= 1)
-            and (queens_black == 0 or minors_black <= 1)
+        return (
+            queens_white
+            + queens_black
+            + rooks_white
+            + rooks_black
+            + minors_white
+            + minors_black
+            <= 4
         )
 
     def move_value(self, move: chess.Move, is_endgame: bool):

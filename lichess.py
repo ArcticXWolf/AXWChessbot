@@ -2,6 +2,7 @@ import requests
 from urllib.parse import urljoin
 from requests.exceptions import ConnectionError, HTTPError, ReadTimeout
 from urllib3.exceptions import ProtocolError
+import json
 
 try:
     from http.client import RemoteDisconnected
@@ -14,6 +15,8 @@ import backoff
 
 ENDPOINTS = {
     "profile": "/api/account",
+    "users": "/api/users",
+    "team_members": "/api/team/{}/users",
     "playing": "/api/account/playing",
     "stream": "/api/bot/game/stream/{}",
     "stream_event": "/api/stream/event",
@@ -21,6 +24,7 @@ ENDPOINTS = {
     "move": "/api/bot/game/{}/move/{}",
     "chat": "/api/bot/game/{}/chat",
     "abort": "/api/bot/game/{}/abort",
+    "challenge": "/api/challenge/{}",
     "challenge_ai": "/api/challenge/ai",
     "accept": "/api/challenge/{}/accept",
     "decline": "/api/challenge/{}/decline",
@@ -102,6 +106,18 @@ class Lichess:
         }
         return self.api_post(ENDPOINTS["challenge_ai"], data=payload, timeout=5)
 
+    def challenge_player(self, playername, rated, climit, cinc, color):
+        payload = {
+            "rated": rated,
+            "clock.limit": climit,
+            "clock.increment": cinc,
+            "color": color,
+            "variant": "standard",
+        }
+        return self.api_post(
+            ENDPOINTS["challenge"].format(playername), data=payload, timeout=5
+        )
+
     def accept_challenge(self, challenge_id):
         return self.api_post(ENDPOINTS["accept"].format(challenge_id))
 
@@ -117,9 +133,18 @@ class Lichess:
         self.set_user_agent(profile["username"])
         return profile
 
+    def get_users(self, user_ids: list):
+        payload = ",".join(user_ids)
+        return self.api_post(ENDPOINTS["users"], data=payload)
+
     def get_ongoing_games(self):
         ongoing_games = self.api_get(ENDPOINTS["playing"])["nowPlaying"]
         return ongoing_games
+
+    def get_team_members(self, team_id):
+        url = urljoin(self.baseUrl, ENDPOINTS["team_members"].format(team_id))
+        response = requests.get(url, headers=self.header, stream=True).iter_lines()
+        return [json.loads(line.decode("utf-8")) for line in response]
 
     def resign(self, game_id):
         self.api_post(ENDPOINTS["resign"].format(game_id))
