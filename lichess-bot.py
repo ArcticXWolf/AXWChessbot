@@ -204,7 +204,10 @@ def start(li, user_profile, engine_factory, config):
                     elif timer() - automatic_challenge_timer >= config.get(
                         "automatic_challenge_timer", 1800
                     ):
-                        do_automatic_challenge(li, bots_list)
+                        challenge_bots_stream = multiprocessing.Process(
+                            target=do_automatic_challenge, args=[li, bots_list]
+                        )
+                        challenge_bots_stream.start()
                         automatic_challenge_timer = None
                 else:
                     automatic_challenge_timer = None
@@ -653,11 +656,11 @@ def do_automatic_challenge(li, bots_list):
         logger.info(
             f"+++ Searching for bot to challenge ({len(bots_list)} bots known)."
         )
-        bots = bots_list.copy()
+        bots = list(bots_list).copy()
         random.shuffle(bots)
         for bot_batch in list(grouper(200, bots)):
             infos = li.get_users(bot_batch)
-            time.sleep(2)
+            time.sleep(10)
             for bot in infos:
                 if bot["online"]:
                     logger.info(f"+++ Challenging: {bot['username']}")
@@ -667,6 +670,14 @@ def do_automatic_challenge(li, bots_list):
                         )
                     except HTTPError as e:
                         logger.info(str(e.response.content))
+                        if e.response.status_code == 429:
+                            time.sleep(70)
+                            try:
+                                result = li.challenge_player(
+                                    bot["username"], "true", 300, 3, "random"
+                                )
+                            except HTTPError as e2:
+                                logger.info(str(e2.response.content))
                     return
     else:
         logger.info(f"+++ Bots not loaded. ")

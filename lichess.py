@@ -143,7 +143,7 @@ class Lichess:
 
     def get_team_members(self, team_id):
         url = urljoin(self.baseUrl, ENDPOINTS["team_members"].format(team_id))
-        response = requests.get(url, headers=self.header, stream=True).iter_lines()
+        response = requests.get(url, headers=self.header).iter_lines()
         return [json.loads(line.decode("utf-8")) for line in response]
 
     def resign(self, game_id):
