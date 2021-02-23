@@ -50,21 +50,23 @@ class Search:
         return self.next_move_by_engine()
 
     def next_move_by_engine(self):
-        moves, score = self.iterative_deepening()
-        info = {"moves": moves, "eval": score}
+        moves, score, depth = self.iterative_deepening()
+        info = {"moves": moves, "eval": score, "depth_reached": depth}
         return moves[-1], info
 
     def iterative_deepening(self):
+        depth_reached = 1
         board_copy = self.board.copy()
         moves, score = self.alpha_beta_search(2)
         try:
             TimeOut(self.timeout).start()
             for i in range(3, self.alpha_beta_depth + 1):
                 moves, score = self.alpha_beta_search(i, previous_moves=moves)
+                depth_reached += 1
         except TimeOut.TimeOutException as e:
             self.board = board_copy
 
-        return moves, score
+        return moves, score, depth_reached
 
     def alpha_beta_search(
         self,
