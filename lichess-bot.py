@@ -86,7 +86,7 @@ def start(li, user_profile, engine_factory, config):
     control_queue = manager.Queue()
     bots_list = manager.list()
     load_bots_stream = multiprocessing.Process(
-        target=load_bot_list, args=[li, bots_list]
+        target=load_bot_list, args=[li, bots_list, user_profile]
     )
     load_bots_stream.start()
     logger.info(
@@ -633,13 +633,17 @@ def update_board(board, move):
     return board
 
 
-def load_bot_list(li, bots) -> list:
+def load_bot_list(li, bots, user_profile) -> list:
     teams = ["lichess-bots"]
     logger.info(f"+++ Loading bots from groups {teams}")
     for team in teams:
         players = li.get_team_members(team)
         for player in players:
-            if "title" in player and player["title"] == "BOT":
+            if (
+                "title" in player
+                and player["title"] == "BOT"
+                and player["id"] != user_profile["id"]
+            ):
                 bots.append(player["username"])
 
     logger.info(f"+++ Loaded bots {len(bots)}.")
