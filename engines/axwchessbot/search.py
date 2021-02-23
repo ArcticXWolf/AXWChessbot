@@ -1,8 +1,15 @@
+from typing import Tuple
 import chess
 import chess.polyglot
 import chess.syzygy
 import evaluation
 import os
+from cache import TranspositionTable
+from timeout import TimeOut
+
+LOWER = -1
+EXACT = 0
+UPPER = 1
 
 
 class Search:
@@ -16,86 +23,122 @@ class Search:
         os.path.dirname(os.path.abspath(__file__)), "ending_db"
     )
     ending_piece_count = 5
+    cache = TranspositionTable(1e7)
 
     def __init__(
-        self, board: chess.Board, alpha_beta_depth: int = 2, quiesce_depth: int = 10
+        self,
+        board: chess.Board,
+        alpha_beta_depth: int = 8,
+        quiesce_depth: int = 10,
+        timeout: int = 180,
     ):
-        self.board = board
+        self.board = board.copy()
         self.alpha_beta_depth = alpha_beta_depth
         self.quiesce_depth = quiesce_depth
+        self.cache = TranspositionTable(1e7)
+        self.timeout = timeout
 
     def next_move(self):
         move = self.next_move_by_opening_db()
         if move is not None:
-            return (move, -1)
+            return (move, "openingdb")
 
         move = self.next_move_by_ending_db()
         if move is not None:
-            return (move, -2)
+            return (move, "endingdb")
 
-        move, num_positions = self.next_move_by_engine()
-        return (move, num_positions)
+        return self.next_move_by_engine()
 
     def next_move_by_engine(self):
-        alpha = -100000
-        beta = 100000
-        analyzed_positions = 0
+        moves, score = self.iterative_deepening()
+        info = {"moves": moves, "eval": score}
+        return moves[-1], info
+
+    def iterative_deepening(self):
+        board_copy = self.board.copy()
+        moves, score = self.alpha_beta_search(2)
+        try:
+            TimeOut(self.timeout).start()
+            for i in range(3, self.alpha_beta_depth + 1):
+                moves, score = self.alpha_beta_search(i, previous_moves=moves)
+        except TimeOut.TimeOutException as e:
+            self.board = board_copy
+
+        return moves, score
+
+    def alpha_beta_search(
+        self,
+        depth_left: int = 0,
+        alpha: float = -1.0,
+        beta: float = 1.0,
+        move=None,
+        previous_moves=None,
+    ) -> Tuple:
+        best_score = -1.0
+        best_move = None
+        alpha_orig = alpha
         moves = []
 
-        for move in self.get_moves_by_value():
-            self.board.push(move)
-            score, num_positions, depth = self.alpha_beta_search(
-                -beta, -alpha, self.alpha_beta_depth - 1
-            )
-            score = -score
-            analyzed_positions += num_positions
-            moves.append((move, score, depth))
-            if score > alpha:
-                alpha = score
-            self.board.pop()
-
-        sort_depth = self.alpha_beta_depth
-
-        def sort_function(move_eval):
-            if move_eval[1] == 9999:
-                return (move_eval[1], sort_depth - move_eval[2])
-            return (move_eval[1], 1)
-
-        moves_ordered = sorted(moves, reverse=True, key=sort_function)
-        print(moves_ordered)
-        return (moves_ordered.pop(0)[0], analyzed_positions)
-
-    def alpha_beta_search(self, alpha: int, beta: int, depth_left: int = 0):
-        best_score = -99999
-        analyzed_positions = 0
-        best_move_depth = 0
+        cached = self.cache[self.board]
+        if cached and cached.entry_depth >= depth_left:
+            if cached.flag == EXACT:
+                move = cached.move if not move else move
+                moves.append(move)
+                return moves, cached.val
+            elif cached.flag == LOWER:
+                alpha = max(alpha, cached.val)
+            elif cached.flag == UPPER:
+                beta = min(beta, cached.val)
+            if alpha >= beta:
+                move = cached.move if not move else move
+                moves.append(move)
+                return moves, cached.val
 
         if depth_left <= 0 or self.board.is_game_over():
-            return (self.quiesce_search(alpha, beta, self.quiesce_depth - 1), 1, 0)
-            # return (evaluation.Evaluation(self.board).evaluate(), 1)
+            moves.append(move)
+            return (moves, self.quiesce_search(alpha, beta, self.quiesce_depth - 1))
+            # return (moves, evaluation.Evaluation(self.board).evaluate())
 
-        for move in self.get_moves_by_value():
-            self.board.push(move)
+        move_list_to_choose_from = evaluation.Evaluation(self.board).move_order()
 
-            score, num_positions, depth = self.alpha_beta_search(
-                -beta, -alpha, depth_left - 1
+        if (
+            previous_moves
+            and len(previous_moves) > depth_left
+            and previous_moves[depth_left - 1] in move_list_to_choose_from
+        ):
+            move_list_to_choose_from.insert(0, previous_moves[depth_left - 1])
+
+        for m in move_list_to_choose_from:
+            self.board.push(m)
+
+            new_moves, score = self.alpha_beta_search(
+                depth_left - 1, -beta, -alpha, m, previous_moves
             )
             score = -score
-            analyzed_positions += num_positions
 
             self.board.pop()
 
-            if score >= beta:
-                return (score, analyzed_positions, depth)
             if score > best_score:
+                moves = new_moves
                 best_score = score
-                best_move_depth = depth
+                best_move = m
             if score > alpha:
                 alpha = score
+            if alpha >= beta:
+                break
 
-        return (best_score, analyzed_positions, best_move_depth + 1)
+        if best_score <= alpha_orig:
+            flag = UPPER
+        elif best_score >= beta:
+            flag = LOWER
+        else:
+            flag = EXACT
 
-    def quiesce_search(self, alpha: int, beta: int, depth_left: int = 0):
+        self.cache.store(self.board, best_score, flag, depth_left, best_move)
+        moves.append(best_move)
+        return (moves, best_score)
+
+    def quiesce_search(self, alpha: float, beta: float, depth_left: int = 0):
 
         stand_pat = evaluation.Evaluation(self.board).evaluate()
         if stand_pat >= beta:
@@ -165,15 +208,6 @@ class Search:
 
         tablebase.close()
         return chosen_move
-
-    def get_moves_by_value(self):
-        is_endgame = evaluation.Evaluation(self.board).check_if_endgame()
-
-        def sort_function(move):
-            return evaluation.Evaluation(self.board).move_value(move, is_endgame)
-
-        moves_ordered = sorted(self.board.legal_moves, key=sort_function, reverse=True)
-        return list(moves_ordered)
 
     def get_captures_by_value(self):
         def sort_function(move):

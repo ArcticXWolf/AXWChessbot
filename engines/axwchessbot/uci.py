@@ -38,9 +38,10 @@ class GoCommandArgs:
 
 
 class Uci:
-    def __init__(self, abdepth, qdepth=10):
+    def __init__(self, abdepth, qdepth=10, timeout=180):
         self.abdepth = abdepth
         self.qdepth = qdepth
+        self.timeout = timeout
         self.board = chess.Board()
 
     def communicate(self):
@@ -84,13 +85,16 @@ class Uci:
             if go_args.has_args and go_args.has_timing_info:
                 self.set_depth_by_timing(go_args)
 
+            self.debug(
+                f"Start at depths ({self.abdepth}, {self.qdepth}, {self.timeout})"
+            )
             start_search = timer()
-            move, num_positions = search.Search(
-                self.board, self.abdepth, self.qdepth
+            move, info = search.Search(
+                self.board, self.abdepth, self.qdepth, self.timeout
             ).next_move()
             end_search = timer()
             self.debug(
-                f"Analyzed {num_positions} positions in {end_search - start_search :.2f} sec at depths ({self.abdepth}, {self.qdepth})"
+                f"Analyzed in {end_search - start_search :.2f} sec at depths ({self.abdepth}, {self.qdepth}), info {str(info)}"
             )
             self.output(f"bestmove {move.uci()}")
             return
@@ -109,9 +113,7 @@ class Uci:
         # if go_args.time[self.board.turn] > 120000:
         #    self.abdepth = 3
         #    self.qdepth = 10
-        if go_args.time[self.board.turn] > 10000:
-            self.abdepth = 2
-            self.qdepth = 5
-        else:
-            self.abdepth = 1
-            self.qdepth = 2
+        suggested_time = (go_args.time[self.board.turn] / 1000) / 30
+        self.abdepth = 10
+        self.qdepth = 10
+        self.timeout = int(max(suggested_time, (go_args.inc[self.board.turn] / 1000)))

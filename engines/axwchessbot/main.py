@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 from selfplay import play_self
-from bratko_kopec import test_engine
+from test_engine import test_engine
 import uci
 
 parser = argparse.ArgumentParser()

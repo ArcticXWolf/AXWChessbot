@@ -6,7 +6,7 @@ piece_values = {
     chess.BISHOP: 330,
     chess.ROOK: 500,
     chess.QUEEN: 900,
-    chess.KING: 99999 # has no value, will not be used
+    chess.KING: 2000 # has no value, will not be used
 }
 
 piece_square_tables = {
