@@ -12,7 +12,7 @@ class Evaluation:
     def __init__(self, board: chess.Board):
         self.board = board
 
-    def evaluate(self) -> int:
+    def evaluate(self, is_normalized: bool = True) -> int:
         finished, score = self.evaluate_if_endstate_is_reached()
 
         if finished:
@@ -23,6 +23,8 @@ class Evaluation:
                 return -score
 
         score = self.evaluate_pst_and_material()
+        if is_normalized:
+            score = max(min(score / NORMALIZATION_VALUE, 1.0), -1.0)
 
         if self.board.turn:
             # evals are from whites perspective, convert to current perspective
@@ -51,11 +53,7 @@ class Evaluation:
             color_score = 0
             for piece in chess.PIECE_TYPES:
                 pieces = self.board.pieces(piece, color)
-                pieces_pst_scores = (
-                    itertools.compress(pst[piece], list(pieces))
-                    if len(pieces) > 0
-                    else [0]
-                )
+                pieces_pst_scores = [pst[piece][i] for i in list(pieces)]
                 color_score += (
                     sum(pieces_pst_scores)
                     + len(pieces) * score_tables.piece_values[piece]
@@ -64,7 +62,7 @@ class Evaluation:
                 score += color_score
             else:
                 score -= color_score
-        return max(min(score / NORMALIZATION_VALUE, 1.0), -1.0)
+        return score
 
     def check_if_endgame(self) -> bool:
         queens_white = len(self.board.pieces(chess.QUEEN, chess.WHITE))

@@ -50,23 +50,33 @@ class Search:
         return self.next_move_by_engine()
 
     def next_move_by_engine(self):
-        moves, score, depth = self.iterative_deepening()
-        info = {"moves": moves, "eval": score, "depth_reached": depth}
+        moves, score, depth, debug_moves = self.iterative_deepening()
+        info = {
+            "moves": [move.uci() for move in moves],
+            "eval": score,
+            "depth_reached": depth,
+            # "debug_moves": debug_moves,
+        }
         return moves[-1], info
 
     def iterative_deepening(self):
         depth_reached = 1
         board_copy = self.board.copy()
-        moves, score = self.alpha_beta_search(2)
+        moves, score, debug_moves = self.alpha_beta_search(1)
+        timeout = TimeOut(self.timeout)
         try:
-            TimeOut(self.timeout).start()
-            for i in range(3, self.alpha_beta_depth + 1):
-                moves, score = self.alpha_beta_search(i, previous_moves=moves)
+            timeout.start()
+            for i in range(2, self.alpha_beta_depth + 1):
+                moves, score, debug_moves = self.alpha_beta_search(
+                    i, previous_moves=moves
+                )
                 depth_reached += 1
         except TimeOut.TimeOutException as e:
             self.board = board_copy
+        finally:
+            timeout.disable_timeout()
 
-        return moves, score, depth_reached
+        return moves, score, depth_reached, debug_moves
 
     def alpha_beta_search(
         self,
@@ -80,13 +90,14 @@ class Search:
         best_move = None
         alpha_orig = alpha
         moves = []
+        debug_moves = []
 
         cached = self.cache[self.board]
         if cached and cached.entry_depth >= depth_left:
             if cached.flag == EXACT:
                 move = cached.move if not move else move
                 moves.append(move)
-                return moves, cached.val
+                return moves, cached.val, debug_moves
             elif cached.flag == LOWER:
                 alpha = max(alpha, cached.val)
             elif cached.flag == UPPER:
@@ -94,11 +105,15 @@ class Search:
             if alpha >= beta:
                 move = cached.move if not move else move
                 moves.append(move)
-                return moves, cached.val
+                return moves, cached.val, debug_moves
 
         if depth_left <= 0 or self.board.is_game_over():
             moves.append(move)
-            return (moves, self.quiesce_search(alpha, beta, self.quiesce_depth - 1))
+            return (
+                moves,
+                self.quiesce_search(alpha, beta, self.quiesce_depth - 1),
+                debug_moves,
+            )
             # return (moves, evaluation.Evaluation(self.board).evaluate())
 
         move_list_to_choose_from = evaluation.Evaluation(self.board).move_order()
@@ -111,12 +126,20 @@ class Search:
             move_list_to_choose_from.insert(0, previous_moves[depth_left - 1])
 
         for m in move_list_to_choose_from:
+            san = self.board.san(m)
             self.board.push(m)
 
-            new_moves, score = self.alpha_beta_search(
+            new_moves, score, _ = self.alpha_beta_search(
                 depth_left - 1, -beta, -alpha, m, previous_moves
             )
             score = -score
+            debug_moves.append(
+                (
+                    str(san),
+                    -evaluation.Evaluation(self.board).evaluate(False),
+                    int(score * evaluation.NORMALIZATION_VALUE),
+                )
+            )
 
             self.board.pop()
 
@@ -140,7 +163,7 @@ class Search:
             best_move = m
         self.cache.store(self.board, best_score, flag, depth_left, best_move)
         moves.append(best_move)
-        return (moves, best_score)
+        return (moves, best_score, debug_moves)
 
     def quiesce_search(self, alpha: float, beta: float, depth_left: int = 0):
 

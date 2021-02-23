@@ -15,7 +15,7 @@ def test_engine():
     print("Starting tests.")
     start_whole = timer()
     for test_module, tests in test_modules.items():
-        if test_module in ["eigenmann_rapid"]:
+        if test_module in []:
             continue
         print(f"Starting module {test_module}")
         solved = 0
@@ -30,7 +30,7 @@ def test_engine():
                 operations["bm"] = [str(board.san(x)) for x in operations["bm"]]
 
             start_search = timer()
-            move, info = search.Search(board, 10, 5).next_move()
+            move, info = search.Search(board, 10, 4, 15).next_move()
             end_search = timer()
 
             if "am" in operations.keys() and str(board.san(move)) in operations["am"]:

@@ -19,6 +19,9 @@ class TimeOut:
         signal.signal(signal.SIGALRM, self.raise_timeout)
         signal.alarm(self.sec)
 
+    def disable_timeout(self):
+        signal.alarm(0)
+
     def raise_timeout(self, *args):
         signal.alarm(0)  # disable
         message = "Alarm set for {}s and actually passed {}s".format(
