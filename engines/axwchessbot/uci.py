@@ -43,6 +43,7 @@ class Uci:
         self.qdepth = qdepth
         self.timeout = timeout
         self.board = chess.Board()
+        self.cache = None
 
     def communicate(self):
         while True:
@@ -55,6 +56,7 @@ class Uci:
             quit()
 
         if msg == "uci":
+            self.cache.empty_cache()
             self.output("id name AXWChess")
             self.output("id author Jan Niklas Richter")
             self.output("uciok")
@@ -65,6 +67,7 @@ class Uci:
             return
 
         if msg == "ucinewgame":
+            self.cache.empty_cache()
             return
 
         if "position startpos moves" in msg:
@@ -89,9 +92,11 @@ class Uci:
                 f"Start at depths ({self.abdepth}, {self.qdepth}, {self.timeout})"
             )
             start_search = timer()
-            move, info = search.Search(
-                self.board, self.abdepth, self.qdepth, self.timeout
-            ).next_move()
+            search_obj = search.Search(
+                self.board, self.abdepth, self.qdepth, self.timeout, self.cache
+            )
+            move, info = search_obj.next_move()
+            self.cache = search_obj.cache
             end_search = timer()
             self.debug(
                 f"Analyzed in {end_search - start_search :.2f} sec at depths ({self.abdepth}, {self.qdepth}), info {str(info)}"

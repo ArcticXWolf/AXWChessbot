@@ -31,12 +31,16 @@ class Search:
         alpha_beta_depth: int = 8,
         quiesce_depth: int = 10,
         timeout: int = 180,
+        cache: TranspositionTable = None,
     ):
         self.board = board.copy()
         self.alpha_beta_depth = alpha_beta_depth
         self.quiesce_depth = quiesce_depth
         self.cache = TranspositionTable(1e7)
         self.timeout = timeout
+
+        if cache:
+            self.cache = cache
 
     def next_move(self):
         move = self.next_move_by_opening_db()

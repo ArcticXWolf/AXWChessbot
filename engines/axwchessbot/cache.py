@@ -20,13 +20,10 @@ class TranspositionTable:
 
     def store(self, position, value, flag, entry_depth, move):
         if len(self.basic_cache) > self.size:
-            print("Trans Table is full!")
-            return False
+            self.empty_cache()
         self.basic_cache[chess.polyglot.zobrist_hash(position)] = Entry(
             value, flag, entry_depth, move
         )
-        if len(self.basic_cache) % 5000 == 0:
-            print("cache size:", len(self.basic_cache))
 
         return True
 
