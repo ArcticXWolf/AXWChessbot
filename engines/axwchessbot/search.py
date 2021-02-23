@@ -134,6 +134,8 @@ class Search:
         else:
             flag = EXACT
 
+        if not best_move:
+            best_move = self.board.legal_moves[0]
         self.cache.store(self.board, best_score, flag, depth_left, best_move)
         moves.append(best_move)
         return (moves, best_score)
