@@ -71,6 +71,16 @@ piece_square_tables = {
     ]
 }
 piece_square_tables_endgame = piece_square_tables.copy()
+piece_square_tables_endgame[chess.PAWN] = [
+    0,  0,  0,  0,  0,  0,  0,  0,
+    -10, -5, -5, -20, -20, -5, -5, -10,
+    -5, 5, 5,  5,  5, 5, 5,  -5,
+    10,  10,  10, 10, 10,  10,  10,  10,
+    15,  15, 15, 25, 25, 15,  15,  15,
+    30, 30, 30, 30, 30, 30, 30, 30,
+    50, 50, 50, 50, 50, 50, 50, 50,
+    0,  0,  0,  0,  0,  0,  0,  0
+]
 piece_square_tables_endgame[chess.KING] = [
     -50, -40, -30, -20, -20, -30, -40, -50,
     -30, -20, -10,  0,  0, -10, -20, -30,

@@ -5,7 +5,10 @@ from tests import tests as test_modules
 from timeit import default_timer as timer
 
 
-def print_result(test_module, id, time, move, result, operation, solution, info, board):
+def print_result(
+    test_module, id, time, move, result, operation, solution, info: dict, board
+):
+    info.pop("moves_analysis")
     print(
         f"[{test_module}#{id+1:03d}] {time :05.2f}s {result}: {str(board.san(move)):>6s} vs {operation} {solution} - {str(info)}"
     )

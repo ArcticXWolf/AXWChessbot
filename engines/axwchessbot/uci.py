@@ -56,7 +56,6 @@ class Uci:
             quit()
 
         if msg == "uci":
-            self.cache.empty_cache()
             self.output("id name AXWChess")
             self.output("id author Jan Niklas Richter")
             self.output("uciok")
@@ -67,7 +66,6 @@ class Uci:
             return
 
         if msg == "ucinewgame":
-            self.cache.empty_cache()
             return
 
         if "position startpos moves" in msg:
@@ -79,18 +77,18 @@ class Uci:
             return
 
         if "position fen" in msg:
-            fen = " ".join(msg.split(" ")[2:])
+            fen = " ".join(msg.split(" ")[2:8])
             self.board.set_fen(fen)
+            if len(msg.split(" ")) > 8:
+                moves = msg.split(" ")[9:]
+                for move in moves:
+                    self.board.push(chess.Move.from_uci(move))
             return
 
         if msg[0:2] == "go":
             go_args = GoCommandArgs(msg)
             if go_args.has_args and go_args.has_timing_info:
                 self.set_depth_by_timing(go_args)
-
-            self.debug(
-                f"Start at depths ({self.abdepth}, {self.qdepth}, {self.timeout})"
-            )
             start_search = timer()
             search_obj = search.Search(
                 self.board, self.abdepth, self.qdepth, self.timeout, self.cache
@@ -98,8 +96,9 @@ class Uci:
             move, info = search_obj.next_move()
             self.cache = search_obj.cache
             end_search = timer()
+            info.pop("moves_analysis")
             self.debug(
-                f"Analyzed in {end_search - start_search :.2f} sec at depths ({self.abdepth}, {self.qdepth}), info {str(info)}"
+                f"[{end_search - start_search :.2f}] ({self.abdepth}, {self.qdepth}) {str(info)}"
             )
             self.output(f"bestmove {move.uci()}")
             return
