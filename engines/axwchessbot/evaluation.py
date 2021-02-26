@@ -3,8 +3,6 @@ import chess
 import score_tables
 import itertools
 
-NORMALIZATION_VALUE = 3900
-
 
 class Evaluation:
     board = chess.Board()
@@ -12,7 +10,7 @@ class Evaluation:
     def __init__(self, board: chess.Board):
         self.board = board
 
-    def evaluate(self, is_normalized: bool = True) -> int:
+    def evaluate(self) -> int:
         finished, score = self.evaluate_if_endstate_is_reached()
 
         if finished:
@@ -22,9 +20,9 @@ class Evaluation:
             else:
                 return -score
 
-        score = self.evaluate_pst_and_material()
-        if is_normalized:
-            score = max(min(score / NORMALIZATION_VALUE, 1.0), -1.0)
+        score = int(self.evaluate_material_score())
+        score += self.evaluate_pair_bonus()
+        score += self.evaluate_tempo()
 
         if self.board.turn:
             # evals are from whites perspective, convert to current perspective
@@ -38,14 +36,23 @@ class Evaluation:
 
         result = self.board.result()
         if result == "0-1":
-            return (True, -1.0)
+            return (True, float("-inf"))
         elif result == "1-0":
-            return (True, 1.0)
+            return (True, float("inf"))
         return (True, 0)
 
-    def evaluate_pst_and_material(self) -> int:
+    def evaluate_material_score(self) -> float:
+        midgame_score = float(self.evaluate_material_score_phase(False))
+        endgame_score = float(self.evaluate_material_score_phase(True))
+        gamestate = float(max(self.evaluate_gamephase(), 24))
+
+        return (
+            (gamestate * midgame_score) + ((24.0 - gamestate) * endgame_score)
+        ) / 24.0
+
+    def evaluate_material_score_phase(self, is_endgame: bool) -> int:
         pst = score_tables.piece_square_tables
-        if self.check_if_endgame():
+        if is_endgame:
             pst = score_tables.piece_square_tables_endgame
 
         score = 0
@@ -64,27 +71,61 @@ class Evaluation:
                 score -= color_score
         return score
 
-    def check_if_endgame(self) -> bool:
-        queens_white = len(self.board.pieces(chess.QUEEN, chess.WHITE))
-        queens_black = len(self.board.pieces(chess.QUEEN, chess.BLACK))
-        rooks_white = len(self.board.pieces(chess.ROOK, chess.WHITE))
-        rooks_black = len(self.board.pieces(chess.ROOK, chess.BLACK))
-        minors_white = len(self.board.pieces(chess.BISHOP, chess.WHITE)) + len(
-            self.board.pieces(chess.KNIGHT, chess.WHITE)
-        )
-        minors_black = len(self.board.pieces(chess.BISHOP, chess.BLACK)) + len(
-            self.board.pieces(chess.KNIGHT, chess.BLACK)
+    def evaluate_gamephase(self):
+        return (
+            len(self.board.pieces(chess.KNIGHT, chess.WHITE))
+            + len(self.board.pieces(chess.BISHOP, chess.WHITE))
+            + 2 * len(self.board.pieces(chess.ROOK, chess.WHITE))
+            + 4 * len(self.board.pieces(chess.QUEEN, chess.WHITE))
+            + len(self.board.pieces(chess.KNIGHT, chess.BLACK))
+            + len(self.board.pieces(chess.BISHOP, chess.BLACK))
+            + 2 * len(self.board.pieces(chess.ROOK, chess.BLACK))
+            + 4 * len(self.board.pieces(chess.QUEEN, chess.BLACK))
         )
 
+    def evaluate_pair_bonus(self):
+        score = 0
+
+        if len(self.board.pieces(chess.BISHOP, chess.WHITE)) > 1:
+            score += score_tables.additional_modifiers["bishop_pair"]
+        if len(self.board.pieces(chess.KNIGHT, chess.WHITE)) > 1:
+            score -= score_tables.additional_modifiers["knight_pair"]
+        if len(self.board.pieces(chess.ROOK, chess.WHITE)) > 1:
+            score -= score_tables.additional_modifiers["rook_pair"]
+
+        if len(self.board.pieces(chess.BISHOP, chess.BLACK)) > 1:
+            score -= score_tables.additional_modifiers["bishop_pair"]
+        if len(self.board.pieces(chess.KNIGHT, chess.BLACK)) > 1:
+            score += score_tables.additional_modifiers["knight_pair"]
+        if len(self.board.pieces(chess.ROOK, chess.BLACK)) > 1:
+            score += score_tables.additional_modifiers["rook_pair"]
+
+        return score
+
+    def evaluate_tempo(self):
         return (
-            queens_white
-            + queens_black
-            + rooks_white
-            + rooks_black
-            + minors_white
-            + minors_black
-            <= 4
+            score_tables.additional_modifiers["tempo"]
+            if self.board.turn == chess.WHITE
+            else -score_tables.additional_modifiers["tempo"]
         )
+
+    def evaluate_passed_pawns(self):
+        score = 0
+        for color in chess.COLORS:
+            for pawn in self.board.pieces(chess.PAWN, color):
+                if self.is_passed_pawn(pawn, color):
+                    if color == chess.WHITE:
+                        score += score_tables.additional_piece_square_tables[
+                            "passed_pawn"
+                        ][pawn]
+                    else:
+                        score -= score_tables.additional_piece_square_tables[
+                            "passed_pawn"
+                        ][pawn]
+        return score
+
+    def is_passed_pawn(self, square: chess.Square, color: chess.Color) -> bool:
+        return False
 
     def attacked_by_inferior_piece(
         self, move: chess.Move, evaluate_to_square: bool

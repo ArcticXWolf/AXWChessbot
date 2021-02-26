@@ -63,7 +63,8 @@ class Search:
     def next_move_by_engine(self):
         moves, score, debug_info = self.iterative_deepening()
         debug_info["moves"] = [move.uci() for move in moves]
-        debug_info["eval"] = score
+        debug_info["current_eval"] = evaluation.Evaluation(self.board).evaluate()
+        debug_info["gamephase"] = evaluation.Evaluation(self.board).evaluate_gamephase()
         return moves[-1], debug_info
 
     def iterative_deepening(self):
@@ -90,12 +91,12 @@ class Search:
     def alpha_beta_search(
         self,
         depth_left: int = 0,
-        alpha: float = -1.0,
-        beta: float = 1.0,
+        alpha: float = float("-inf"),
+        beta: float = float("inf"),
         move=None,
         previous_moves=None,
     ) -> Tuple:
-        best_score = -1.0
+        best_score = float("-inf")
         best_move = None
         alpha_orig = alpha
         moves = []
@@ -149,8 +150,8 @@ class Search:
             debug_info["moves_analysis"].append(
                 (
                     str(san),
-                    -evaluation.Evaluation(self.board).evaluate(False),
-                    int(score * evaluation.NORMALIZATION_VALUE),
+                    -evaluation.Evaluation(self.board).evaluate(),
+                    score,
                 )
             )
             debug_info["positions_analyzed"] += new_debug_info["positions_analyzed"]

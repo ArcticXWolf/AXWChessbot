@@ -38,7 +38,7 @@ class GoCommandArgs:
 
 
 class Uci:
-    def __init__(self, abdepth, qdepth=10, timeout=180):
+    def __init__(self, abdepth=4, qdepth=10, timeout=180):
         self.abdepth = abdepth
         self.qdepth = qdepth
         self.timeout = timeout
@@ -118,6 +118,9 @@ class Uci:
         #    self.abdepth = 3
         #    self.qdepth = 10
         suggested_time = (go_args.time[self.board.turn] / 1000) / 30
+        suggested_time = max(go_args.inc[self.board.turn] / 1000, suggested_time)
+        suggested_time = min(go_args.time[self.board.turn] / 1000 / 2, suggested_time)
+        suggested_time = min(suggested_time, 30)
         self.abdepth = 10
         self.qdepth = 10
-        self.timeout = int(max(suggested_time, (go_args.inc[self.board.turn] / 1000)))
+        self.timeout = int(suggested_time)
