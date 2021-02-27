@@ -60,7 +60,13 @@ class Evaluation:
             color_score = 0
             for piece in chess.PIECE_TYPES:
                 pieces = self.board.pieces(piece, color)
-                pieces_pst_scores = [pst[piece][i] for i in list(pieces)]
+                if color == chess.WHITE:
+                    pieces_pst_scores = [pst[piece][i] for i in list(pieces)]
+                else:
+                    pieces_pst_scores = [
+                        pst[piece][chess.square_mirror(i)] for i in list(pieces)
+                    ]
+
                 color_score += (
                     sum(pieces_pst_scores)
                     + len(pieces) * score_tables.piece_values[piece]
