@@ -75,6 +75,11 @@ class Evaluation:
                 score += color_score
             else:
                 score -= color_score
+
+        if not is_endgame:
+            score += self.evaluate_king_shield(chess.WHITE)
+            score += self.evaluate_king_shield(chess.BLACK)
+
         return score
 
     def evaluate_gamephase(self):
@@ -131,7 +136,103 @@ class Evaluation:
         return score
 
     def is_passed_pawn(self, square: chess.Square, color: chess.Color) -> bool:
-        return False
+        piece = self.board.piece_type_at(square)
+        if self.board.piece_type_at(square) != chess.PAWN:
+            return False
+
+        ranks_to_go = range(chess.square_rank(square) + 1, 8)
+        if color == chess.BLACK:
+            ranks_to_go = range(0, chess.square_rank(square))
+
+        amount_pawns_on_same_file = sum(
+            [
+                self.board.piece_type_at(chess.square(chess.square_file(square), i))
+                == chess.PAWN
+                for i in ranks_to_go
+            ]
+        )
+        if amount_pawns_on_same_file > 0:
+            return False
+
+        amount_enemy_pawns_on_adjacent_files = 0
+        if chess.square_file(square) - 1 >= 0:
+            amount_enemy_pawns_on_adjacent_files += sum(
+                [
+                    self.board.piece_at(chess.square(chess.square_file(square) - 1, i))
+                    == chess.Piece(chess.PAWN, not color)
+                    for i in ranks_to_go
+                ]
+            )
+        if chess.square_file(square) + 1 <= 8:
+            amount_enemy_pawns_on_adjacent_files += sum(
+                [
+                    self.board.piece_at(chess.square(chess.square_file(square) + 1, i))
+                    == chess.Piece(chess.PAWN, not color)
+                    for i in ranks_to_go
+                ]
+            )
+
+        if amount_enemy_pawns_on_adjacent_files > 0:
+            return False
+
+        return True
+
+    def evaluate_king_shield(self, color: chess.Color):
+        score = 0
+        rank_2_to_check = 2
+        rank_3_to_check = 3
+        king_position = self.board.pieces(chess.KING, color).pop()
+
+        if color == chess.BLACK:
+            rank_2_to_check = 7
+            rank_3_to_check = 6
+
+        if chess.square_file(king_position) > 4:
+            pawn_count_2 = len(
+                [
+                    self.board.piece_at(chess.square(i, rank_2_to_check))
+                    == chess.Piece(chess.PAWN, color)
+                    for i in range(5, 8)
+                ]
+            )
+            pawn_count_3 = len(
+                [
+                    self.board.piece_at(chess.square(i, rank_3_to_check))
+                    == chess.Piece(chess.PAWN, color)
+                    for i in range(5, 8)
+                ]
+            )
+            score += (
+                pawn_count_2 * score_tables.additional_modifiers["king_shield_rank_2"]
+            )
+            score += (
+                pawn_count_3 * score_tables.additional_modifiers["king_shield_rank_3"]
+            )
+        elif chess.square_file(king_position) < 3:
+            pawn_count_2 = len(
+                [
+                    self.board.piece_at(chess.square(i, rank_2_to_check))
+                    == chess.Piece(chess.PAWN, color)
+                    for i in range(0, 3)
+                ]
+            )
+            pawn_count_3 = len(
+                [
+                    self.board.piece_at(chess.square(i, rank_3_to_check))
+                    == chess.Piece(chess.PAWN, color)
+                    for i in range(0, 3)
+                ]
+            )
+            score += (
+                pawn_count_2 * score_tables.additional_modifiers["king_shield_rank_2"]
+            )
+            score += (
+                pawn_count_3 * score_tables.additional_modifiers["king_shield_rank_3"]
+            )
+
+        if color == chess.BLACK:
+            return -score
+        return score
 
     def attacked_by_inferior_piece(
         self, move: chess.Move, evaluate_to_square: bool

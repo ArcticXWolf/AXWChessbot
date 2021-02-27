@@ -16,6 +16,9 @@ additional_modifiers = {
     "open_rook": 10,
     "half_rook": 5,
     "tempo": 10,
+    "king_shield_rank_2": 10,
+    "king_shield_rank_3": 5,
+    "king_no_shield_penalty": 10,
 }
 
 additional_settings = {
