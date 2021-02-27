@@ -23,6 +23,8 @@ class Evaluation:
         score = int(self.evaluate_material_score())
         score += self.evaluate_pair_bonus()
         score += self.evaluate_tempo()
+        score += self.evaluate_blocked_pieces(chess.WHITE)
+        score += self.evaluate_blocked_pieces(chess.BLACK)
 
         if self.board.turn:
             # evals are from whites perspective, convert to current perspective
@@ -229,6 +231,33 @@ class Evaluation:
             score += (
                 pawn_count_3 * score_tables.additional_modifiers["king_shield_rank_3"]
             )
+
+        if color == chess.BLACK:
+            return -score
+        return score
+
+    def evaluate_blocked_pieces(self, color: chess.Color):
+        score = 0
+
+        # king blocks rook
+        side_rank = 0 if color == chess.WHITE else 7
+        if (
+            self.board.piece_type_at(chess.square(5, side_rank)) == chess.KING
+            or self.board.piece_type_at(chess.square(6, side_rank)) == chess.KING
+        ) and (
+            self.board.piece_type_at(chess.square(6, side_rank)) == chess.ROOK
+            or self.board.piece_type_at(chess.square(7, side_rank)) == chess.ROOK
+        ):
+            score -= score_tables.additional_modifiers["king_blocks_rook_penalty"]
+
+        if (
+            self.board.piece_type_at(chess.square(1, side_rank)) == chess.KING
+            or self.board.piece_type_at(chess.square(2, side_rank)) == chess.KING
+        ) and (
+            self.board.piece_type_at(chess.square(0, side_rank)) == chess.ROOK
+            or self.board.piece_type_at(chess.square(1, side_rank)) == chess.ROOK
+        ):
+            score -= score_tables.additional_modifiers["king_blocks_rook_penalty"]
 
         if color == chess.BLACK:
             return -score

@@ -18,7 +18,7 @@ additional_modifiers = {
     "tempo": 10,
     "king_shield_rank_2": 10,
     "king_shield_rank_3": 5,
-    "king_no_shield_penalty": 10,
+    "king_blocks_rook_penalty": 24
 }
 
 additional_settings = {
