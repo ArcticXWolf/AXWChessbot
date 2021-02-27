@@ -28,7 +28,7 @@ class Search:
     def __init__(
         self,
         board: chess.Board,
-        alpha_beta_depth: int = 8,
+        alpha_beta_depth: int = 10,
         quiesce_depth: int = 10,
         timeout: int = 180,
         cache: TranspositionTable = None,
