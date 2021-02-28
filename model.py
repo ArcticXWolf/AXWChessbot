@@ -11,35 +11,51 @@ class Challenge:
         self.speed = c_info["speed"]
         self.increment = c_info.get("timeControl", {}).get("increment", -1)
         self.challenger = c_info.get("challenger")
-        self.challenger_title = self.challenger.get("title") if self.challenger else None
+        self.challenger_title = (
+            self.challenger.get("title") if self.challenger else None
+        )
         self.challenger_is_bot = self.challenger_title == "BOT"
-        self.challenger_master_title = self.challenger_title if not self.challenger_is_bot else None
-        self.challenger_name = self.challenger["name"] if self.challenger else "Anonymous"
+        self.challenger_master_title = (
+            self.challenger_title if not self.challenger_is_bot else None
+        )
+        self.challenger_name = (
+            self.challenger["name"] if self.challenger else "Anonymous"
+        )
         self.challenger_rating_int = self.challenger["rating"] if self.challenger else 0
         self.challenger_rating = self.challenger_rating_int or "?"
 
     def is_supported_variant(self, supported):
         return self.variant in supported
 
-    def is_supported_time_control(self, supported_speed, supported_increment_max, supported_increment_min):
+    def is_supported_time_control(
+        self, supported_speed, supported_increment_max, supported_increment_min
+    ):
         if self.increment < 0:
             return self.speed in supported_speed
-        return self.speed in supported_speed and self.increment <= supported_increment_max and self.increment >= supported_increment_min
+        return (
+            self.speed in supported_speed
+            and self.increment <= supported_increment_max
+            and self.increment >= supported_increment_min
+        )
 
     def is_supported_mode(self, supported):
         return "rated" in supported if self.rated else "casual" in supported
 
     def is_supported(self, config):
-        if ( not config.get("accept_bot", False) ) and self.challenger_is_bot:
+        if (not config.get("accept_bot", False)) and self.challenger_is_bot:
             return False
-        if config.get("only_bot", False) and ( not self.challenger_is_bot ):
+        if config.get("only_bot", False) and (not self.challenger_is_bot):
             return False
         variants = config["variants"]
         tc = config["time_controls"]
         inc_max = config.get("max_increment", 180)
         inc_min = config.get("min_increment", 0)
         modes = config["modes"]
-        return self.is_supported_time_control(tc, inc_max, inc_min) and self.is_supported_variant(variants) and self.is_supported_mode(modes)
+        return (
+            self.is_supported_time_control(tc, inc_max, inc_min)
+            and self.is_supported_variant(variants)
+            and self.is_supported_mode(modes)
+        )
 
     def score(self):
         rated_bonus = 200 if self.rated else 0
@@ -50,10 +66,18 @@ class Challenge:
         return "rated" if self.rated else "casual"
 
     def challenger_full_name(self):
-        return "{}{}".format(self.challenger_title + " " if self.challenger_title else "", self.challenger_name)
+        return "{}{}".format(
+            self.challenger_title + " " if self.challenger_title else "",
+            self.challenger_name,
+        )
 
     def __str__(self):
-        return "{} {} challenge from {}({})".format(self.perf_name, self.mode(), self.challenger_full_name(), self.challenger_rating)
+        return "{} {} challenge from {}({})".format(
+            self.perf_name,
+            self.mode(),
+            self.challenger_full_name(),
+            self.challenger_rating,
+        )
 
     def __repr__(self):
         return self.__str__()
@@ -65,7 +89,9 @@ class Game:
         self.id = json.get("id")
         self.speed = json.get("speed")
         clock = json.get("clock", {}) or {}
-        self.clock_initial = clock.get("initial", 1000 * 3600 * 24 * 365 * 10)  # unlimited = 10 years
+        self.clock_initial = clock.get(
+            "initial", 1000 * 3600 * 24 * 365 * 10
+        )  # unlimited = 10 years
         self.clock_increment = clock.get("increment", 0)
         self.perf_name = json.get("perf").get("name") if json.get("perf") else "{perf?}"
         self.variant_name = json.get("variant")["name"]
@@ -73,15 +99,24 @@ class Game:
         self.black = Player(json.get("black"))
         self.initial_fen = json.get("initialFen")
         self.state = json.get("state")
-        self.is_white = bool(self.white.name and self.white.name.lower() == username.lower())
+        self.is_white = bool(
+            self.white.name and self.white.name.lower() == username.lower()
+        )
         self.my_color = "white" if self.is_white else "black"
         self.opponent_color = "black" if self.is_white else "white"
         self.me = self.white if self.is_white else self.black
         self.opponent = self.black if self.is_white else self.white
         self.base_url = base_url
-        self.white_starts = self.initial_fen == "startpos" or self.initial_fen.split()[1] == "w"
+        self.white_starts = (
+            self.initial_fen == "startpos" or self.initial_fen.split()[1] == "w"
+        )
         self.abort_at = time.time() + abort_time
-        self.terminate_at = time.time() + (self.clock_initial + self.clock_increment) / 1000 + abort_time + 60
+        self.terminate_at = (
+            time.time()
+            + (self.clock_initial + self.clock_increment) / 1000
+            + abort_time
+            + 60
+        )
 
     def url(self):
         return urljoin(self.base_url, "{}/{}".format(self.id, self.my_color))
@@ -124,7 +159,9 @@ class Player:
             return "AI level {}".format(self.aiLevel)
         else:
             rating = "{}{}".format(self.rating, "?" if self.provisional else "")
-            return "{}{}({})".format(self.title + " " if self.title else "", self.name, rating)
+            return "{}{}({})".format(
+                self.title + " " if self.title else "", self.name, rating
+            )
 
     def __repr__(self):
         return self.__str__()

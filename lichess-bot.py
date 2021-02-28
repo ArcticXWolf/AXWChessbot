@@ -19,6 +19,7 @@ import random
 from config import load_config
 from conversation import Conversation, ChatLine
 from functools import partial
+from chatterer.eventmanager import Eventmanager
 from requests.exceptions import (
     ChunkedEncodingError,
     ConnectionError,
@@ -239,6 +240,7 @@ def play_game(
     engine = engine_factory(board)
     engine.get_opponent_info(game)
     conversation = Conversation(game, engine, li, __version__, challenge_queue)
+    conversation_manager = Eventmanager(conversation)
 
     logger.info("+++ {}".format(game))
 
@@ -366,6 +368,7 @@ def play_game(
                 moves = upd["moves"].split()
                 if len(moves) > 0 and len(moves) != len(board.move_stack):
                     board = update_board(board, moves[-1])
+                conversation_manager.handle_events(board, game)
                 if not is_game_over(game) and is_engine_move(game, moves):
                     if config.get("fake_think_time") and len(moves) > 9:
                         delay = (
