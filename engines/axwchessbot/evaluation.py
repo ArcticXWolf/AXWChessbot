@@ -23,6 +23,7 @@ class Evaluation:
         score = int(self.evaluate_material_score())
         score += self.evaluate_pair_bonus()
         score += self.evaluate_tempo()
+        score += self.evaluate_rook_bonus()
         score += self.evaluate_blocked_pieces(chess.WHITE)
         score += self.evaluate_blocked_pieces(chess.BLACK)
 
@@ -120,17 +121,19 @@ class Evaluation:
     def evaluate_piece_mobility_score_current_color(self, is_endgame: bool) -> int:
         score = 0
 
+        move_piece_table = {}
+
+        for move in self.board.legal_moves:
+            if move.from_square not in move_piece_table:
+                move_piece_table[move.from_square] = 0
+            move_piece_table[move.from_square] += 1
+
         for piece_type in chess.PIECE_TYPES:
             if piece_type == chess.PAWN or piece_type == chess.KING:
                 continue
 
             for piece in self.board.pieces(piece_type, self.board.turn):
-                num_moves = sum(
-                    [
-                        True if move.from_square == piece else False
-                        for move in self.board.legal_moves
-                    ]
-                )
+                num_moves = move_piece_table[move.from_square]
                 score += self.evaluate_single_piece_mobility_score(
                     piece_type, num_moves, is_endgame
                 )
