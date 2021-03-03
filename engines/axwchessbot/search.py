@@ -17,7 +17,7 @@ class Search:
     alpha_beta_depth = 2
     quiesce_depth = 10
     opening_db_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "opening_db/Perfect2017-SF12.bin"
+        os.path.dirname(os.path.abspath(__file__)), "opening_db/jnr-combine.bin"
     )
     ending_db_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "ending_db"
