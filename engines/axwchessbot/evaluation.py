@@ -82,6 +82,8 @@ class Evaluation:
             score += self.evaluate_king_shield(chess.WHITE)
             score += self.evaluate_king_shield(chess.BLACK)
 
+        score += self.evaluate_piece_mobility_score_both_colors(is_endgame)
+
         return score
 
     def evaluate_gamephase(self):
@@ -95,6 +97,87 @@ class Evaluation:
             + 2 * len(self.board.pieces(chess.ROOK, chess.BLACK))
             + 4 * len(self.board.pieces(chess.QUEEN, chess.BLACK))
         )
+
+    def evaluate_piece_mobility_score_both_colors(self, is_endgame: bool) -> int:
+        score = 0
+
+        # first color
+        if self.board.turn == chess.WHITE:
+            score += self.evaluate_piece_mobility_score_current_color(is_endgame)
+        else:
+            score -= self.evaluate_piece_mobility_score_current_color(is_endgame)
+
+        # second color
+        self.board.push(chess.Move.null())
+        if self.board.turn == chess.WHITE:
+            score += self.evaluate_piece_mobility_score_current_color(is_endgame)
+        else:
+            score -= self.evaluate_piece_mobility_score_current_color(is_endgame)
+        self.board.pop()
+
+        return score
+
+    def evaluate_piece_mobility_score_current_color(self, is_endgame: bool) -> int:
+        score = 0
+
+        for piece_type in chess.PIECE_TYPES:
+            if piece_type == chess.PAWN or piece_type == chess.KING:
+                continue
+
+            for piece in self.board.pieces(piece_type, self.board.turn):
+                num_moves = sum(
+                    [
+                        True if move.from_square == piece else False
+                        for move in self.board.legal_moves
+                    ]
+                )
+                score += self.evaluate_single_piece_mobility_score(
+                    piece_type, num_moves, is_endgame
+                )
+
+        return score
+
+    def evaluate_single_piece_mobility_score(
+        self, piece_type: chess.PieceType, num_moves: int, is_endgame: bool
+    ):
+        return score_tables.piece_mobility_weights[is_endgame][piece_type] * (
+            num_moves - score_tables.piece_average_moves[piece_type]
+        )
+
+    def evaluate_rook_bonus(self) -> int:
+        score = 0
+
+        for color in chess.COLORS:
+            color_score = 0
+            for piece in self.board.pieces(chess.ROOK, color):
+                amount_own_pawns_in_same_file = sum(
+                    [
+                        self.board.piece_at(chess.square(chess.square_file(piece), i))
+                        == chess.Piece(chess.PAWN, color)
+                        for i in range(0, 8)
+                    ]
+                )
+                if amount_own_pawns_in_same_file > 0:
+                    continue
+
+                amount_enemy_pawns_in_same_file = sum(
+                    [
+                        self.board.piece_at(chess.square(chess.square_file(piece), i))
+                        == chess.Piece(chess.PAWN, not color)
+                        for i in range(0, 8)
+                    ]
+                )
+                if amount_enemy_pawns_in_same_file > 0:  # semi open file
+                    color_score += score_tables.additional_modifiers["half_rook"]
+                else:  # open file
+                    color_score += score_tables.additional_modifiers["open_rook"]
+
+            if color == chess.WHITE:
+                score += color_score
+            else:
+                score -= color_score
+
+        return score
 
     def evaluate_pair_bonus(self):
         score = 0
@@ -138,7 +221,6 @@ class Evaluation:
         return score
 
     def is_passed_pawn(self, square: chess.Square, color: chess.Color) -> bool:
-        piece = self.board.piece_type_at(square)
         if self.board.piece_type_at(square) != chess.PAWN:
             return False
 
@@ -347,3 +429,7 @@ class Evaluation:
                 score_tables.piece_values[to_piece.piece_type]
                 - score_tables.piece_values[from_piece.piece_type]
             )
+
+
+if __name__ == "__main__":
+    Evaluation(chess.Board()).evaluate()
