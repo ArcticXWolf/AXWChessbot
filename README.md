@@ -13,11 +13,14 @@ I have not been able to conduct a good comparison against other engines yet
 and furthermore I change the engine quite a bit, so the strength may vary
 from time to time. However the engine is available on lichess and there it
 beats stockfish on difficulty levels 1-4 (lichess rating levels of 800-1700)
-confidently. Level 5 (rating 2000) is dominated by stockfish, but AXWChessBot
-manages to secure some wins as well.
+confidently on rapid 10+10 rules. Level 5 (rating 2000) is dominated by
+stockfish, but AXWChessBot manages to secure some wins as well.
 
-So its strength should be between 1700 and 2000. Remember that this is
-a lichess rating which does not correspond to the FIDE elo ratings.
+So its strength should be between 1700 and 2000. Remember that this is a
+lichess rating which does not correspond to the FIDE elo ratings and that its
+strength also depends on the machine it is running on. More computing
+resources mean more depth in the search tree. The server running the bot on
+lichess provides enough resources for an average search depth of 3-4 plys.
 
 ## Features
 
