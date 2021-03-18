@@ -2,10 +2,10 @@ from typing import Tuple
 import chess
 import chess.polyglot
 import chess.syzygy
-import evaluation
+from evaluation import evaluation
 import os
-from cache import TranspositionTable
-from timeout import TimeOut
+from .cache import TranspositionTable
+from .timeout import TimeOut
 
 LOWER = -1
 EXACT = 0

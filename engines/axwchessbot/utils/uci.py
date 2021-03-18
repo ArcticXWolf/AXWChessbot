@@ -1,6 +1,6 @@
 import sys
 import chess
-import search
+from search import search
 from timeit import default_timer as timer
 
 

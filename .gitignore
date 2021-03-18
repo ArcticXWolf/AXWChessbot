@@ -5,3 +5,4 @@ __pycache__
 !/engines/axwchessbot
 !/engines/README.md
 .vscode
+.coverage
