@@ -1,8 +1,23 @@
 # AXWChessbot
 
-This is a simple chess engine written in python. Its main code can be found under [engines/axwchessbot/](engines/axwchessbot), while the surrounding code is a fork of [lichess-bot](https://github.com/ShailChoksi/lichess-bot) for easy integration with [lichess](https://lichess.org).
+This is a simple chess engine written in python. Its main code can be found
+under [engines/axwchessbot/](engines/axwchessbot), while the surrounding code
+is a fork of [lichess-bot](https://github.com/ShailChoksi/lichess-bot) for
+easy integration with [lichess](https://lichess.org).
 
 You can play against the engine [here](https://lichess.org/@/AXWChessBot).
+
+## Strength
+
+I have not been able to conduct a good comparison against other engines yet
+and furthermore I change the engine quite a bit, so the strength may vary
+from time to time. However the engine is available on lichess and there it
+beats stockfish on difficulty levels 1-4 (lichess rating levels of 800-1700)
+confidently. Level 5 (rating 2000) is dominated by stockfish, but AXWChessBot
+manages to secure some wins as well.
+
+So its strength should be between 1700 and 2000. Remember that this is
+a lichess rating which does not correspond to the FIDE elo ratings.
 
 ## Features
 
