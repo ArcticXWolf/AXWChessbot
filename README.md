@@ -30,7 +30,7 @@ You can play against the engine [here](https://lichess.org/@/AXWChessBot).
 * Integrated into lichess-bot
     * Bot reacts to game events via chat
 
-## Features missing
+## Features ideas
 
 * Killer move heuristics
 * Multiprocessing (Lazy SMP?)
