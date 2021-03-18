@@ -17,10 +17,10 @@ class Search:
     alpha_beta_depth = 2
     quiesce_depth = 10
     opening_db_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "opening_db/jnr-combine.bin"
+        os.path.dirname(os.path.abspath(__file__)), "../opening_db/jnr-combine.bin"
     )
     ending_db_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "ending_db"
+        os.path.dirname(os.path.abspath(__file__)), "../ending_db"
     )
     ending_piece_count = 5
     cache = TranspositionTable(1e7)
@@ -63,8 +63,11 @@ class Search:
     def next_move_by_engine(self):
         moves, score, debug_info = self.iterative_deepening()
         debug_info["moves"] = [move.uci() for move in moves]
-        debug_info["current_eval"] = evaluation.Evaluation(self.board).evaluate()
-        debug_info["gamephase"] = evaluation.Evaluation(self.board).evaluate_gamephase()
+        eval = evaluation.Evaluation(self.board).evaluate()
+        debug_info["current_eval"] = (
+            eval.eval_result[chess.WHITE].__dict__,
+            eval.eval_result[chess.BLACK].__dict__,
+        )
         return moves[-1], debug_info
 
     def iterative_deepening(self):
@@ -150,7 +153,7 @@ class Search:
             debug_info["moves_analysis"].append(
                 (
                     str(san),
-                    -evaluation.Evaluation(self.board).evaluate(),
+                    str(evaluation.Evaluation(self.board).evaluate()),
                     score,
                 )
             )
@@ -185,7 +188,7 @@ class Search:
 
     def quiesce_search(self, alpha: float, beta: float, depth_left: int = 0):
 
-        stand_pat = evaluation.Evaluation(self.board).evaluate()
+        stand_pat = evaluation.Evaluation(self.board).evaluate().total_score_perspective
         if stand_pat >= beta:
             return beta
         if alpha < stand_pat:
