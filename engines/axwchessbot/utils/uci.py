@@ -96,8 +96,16 @@ class Uci:
             move, info = search_obj.next_move()
             self.cache = search_obj.cache
             end_search = timer()
+
             info.pop("moves_analysis")
+            score = info.get("current_eval", 0.0)
+            if self.board.turn == chess.BLACK:
+                score = -score
+
             self.debug(f"[{end_search - start_search :.2f}] {str(info)}")
+            self.output(
+                f"info score cp {score} depth {info.get('depth_reached', 0)} nodes {info.get('positions_analyzed', 0)}"
+            )
             self.output(f"bestmove {move.uci()}")
             return
 
