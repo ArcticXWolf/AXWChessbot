@@ -9,6 +9,8 @@ class GoCommandArgs:
     has_timing_info = False
     time = {chess.WHITE: None, chess.BLACK: None}
     inc = {chess.WHITE: None, chess.BLACK: None}
+    movestogo = 28
+    movetime = None
 
     def __init__(self, line: str):
         if len(line) <= 2:
@@ -26,6 +28,10 @@ class GoCommandArgs:
                     self.inc[chess.WHITE] = int(next(args, None))
                 if arg == "binc":
                     self.inc[chess.BLACK] = int(next(args, None))
+                if arg == "movestogo":
+                    self.movestogo = int(next(args, None))
+                if arg == "movetime":
+                    self.movetime = int(next(args, None))
         except:
             pass
 
@@ -117,16 +123,21 @@ class Uci:
         print(f"# {msg}", file=sys.stderr)
 
     def set_depth_by_timing(self, go_args: GoCommandArgs):
-        # if go_args.time[self.board.turn] > 300000:
-        #    self.abdepth = 4
-        #    self.qdepth = 10
-        # if go_args.time[self.board.turn] > 120000:
-        #    self.abdepth = 3
-        #    self.qdepth = 10
-        suggested_time = (go_args.time[self.board.turn] / 1000) / 30
-        suggested_time = max(go_args.inc[self.board.turn] / 1000, suggested_time)
-        suggested_time = min(go_args.time[self.board.turn] / 1000 / 2, suggested_time)
-        suggested_time = min(suggested_time, 30)
         self.abdepth = 40
         self.qdepth = 6
-        self.timeout = int(suggested_time)
+
+        if go_args.movetime is not None:
+            self.timeout = go_args.movetime
+            return
+
+        suggested_time = (
+            int(
+                0.95
+                * float(go_args.time[self.board.turn])
+                / 1000.0
+                / (float(go_args.movestogo) + 2.0)
+            )
+            + go_args.inc[self.board.turn]
+        )
+
+        self.timeout = min(suggested_time, 30)
