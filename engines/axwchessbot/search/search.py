@@ -64,9 +64,10 @@ class Search:
         moves, score, debug_info = self.iterative_deepening()
         debug_info["moves"] = [move.uci() for move in moves]
         eval = evaluation.Evaluation(self.board).evaluate()
-        debug_info["current_eval"] = (
-            eval.eval_result[chess.WHITE].__dict__,
-            eval.eval_result[chess.BLACK].__dict__,
+        debug_info["current_eval"] = eval.total_score
+        debug_info["gamephase"] = (
+            eval.eval_result[chess.WHITE].gamephase
+            + eval.eval_result[chess.BLACK].gamephase
         )
         return moves[-1], debug_info
 

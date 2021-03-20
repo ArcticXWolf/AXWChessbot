@@ -48,7 +48,7 @@ class Uci:
     def communicate(self):
         while True:
             msg = input()
-            print(f"INPUT: {msg}", file=sys.stderr)
+            print(f"> {msg}", file=sys.stderr)
             self.command(msg)
 
     def command(self, msg):
@@ -97,18 +97,16 @@ class Uci:
             self.cache = search_obj.cache
             end_search = timer()
             info.pop("moves_analysis")
-            self.debug(
-                f"[{end_search - start_search :.2f}] ({self.abdepth}, {self.qdepth}) {str(info)}"
-            )
+            self.debug(f"[{end_search - start_search :.2f}] {str(info)}")
             self.output(f"bestmove {move.uci()}")
             return
 
     def output(self, msg):
         print(msg)
-        print(f"OUTPUT: {msg}", file=sys.stderr)
+        print(f"< {msg}", file=sys.stderr)
 
     def debug(self, msg):
-        print(f"DEBUG: {msg}", file=sys.stderr)
+        print(f"# {msg}", file=sys.stderr)
 
     def set_depth_by_timing(self, go_args: GoCommandArgs):
         # if go_args.time[self.board.turn] > 300000:

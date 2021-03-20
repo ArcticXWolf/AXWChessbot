@@ -43,6 +43,9 @@ class Evaluation:
             return self
 
         self.evaluated = True
+        self.evaluate_gamephase(chess.WHITE)
+        self.evaluate_gamephase(chess.BLACK)
+
         if self.evaluate_gameover() is not None:
             self.total_score = self.evaluate_gameover()
             self.total_score_perspective = self.total_score
@@ -52,7 +55,6 @@ class Evaluation:
 
         for color in chess.COLORS:
             self.evaluate_material_score(color)
-            self.evaluate_gamephase(color)
             self.evaluate_pair_bonus(color)
             self.evaluate_rook_bonus(color)
             self.evaluate_tempo(color)
@@ -116,7 +118,21 @@ class Evaluation:
             return float("-inf")
         elif result == "1-0":
             return float("inf")
-        return 0.0
+
+        # draw, calculate contempt factor via gamephase
+        # on midgame, +60 for enemy
+        # on endgame, 0
+        draw_score = (
+            float(
+                self.eval_result[chess.WHITE].gamephase
+                + self.eval_result[chess.WHITE].gamephase
+            )
+            * 60.0
+            / 24.0
+        )
+        if self.board.turn == chess.WHITE:
+            return -draw_score
+        return draw_score
 
     def evaluate_material_score(self, color: chess.Color) -> None:
         for piece_type in chess.PIECE_TYPES:
