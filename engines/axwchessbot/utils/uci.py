@@ -130,14 +130,11 @@ class Uci:
             self.timeout = go_args.movetime
             return
 
-        suggested_time = (
-            int(
-                0.95
-                * float(go_args.time[self.board.turn])
-                / 1000.0
-                / (float(go_args.movestogo) + 2.0)
-            )
-            + go_args.inc[self.board.turn]
-        )
+        suggested_time = int(
+            0.95
+            * float(go_args.time[self.board.turn])
+            / 1000.0
+            / (float(go_args.movestogo) + 2.0)
+        ) + int(float(go_args.inc[self.board.turn]) / 1000.0)
 
         self.timeout = min(suggested_time, 30)
