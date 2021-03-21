@@ -135,6 +135,6 @@ class Uci:
             * float(go_args.time[self.board.turn])
             / 1000.0
             / (float(go_args.movestogo) + 2.0)
-        ) + int(float(go_args.inc[self.board.turn]) / 1000.0)
+        ) + int(float(go_args.inc[self.board.turn]) / 1000.0 / 2.0)
 
         self.timeout = min(suggested_time, 30)
