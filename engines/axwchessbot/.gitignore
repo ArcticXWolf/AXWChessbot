@@ -4,3 +4,5 @@ __pycache__/
 ending_db/*.rtbw
 ending_db/*.rtbz
 opening_db/*.bin
+tests/results/*
+!.keep
