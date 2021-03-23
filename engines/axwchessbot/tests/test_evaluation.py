@@ -34,12 +34,8 @@ def test_if_evaluation_calculates_piece_square_score_correctly():
     eval.evaluate_material_score(chess.WHITE)
     eval.evaluate_material_score(chess.BLACK)
 
-    assert (
-        sum(eval.eval_result[chess.WHITE].piece_square_score_midgame[chess.PAWN]) == -66
-    )
-    assert (
-        sum(eval.eval_result[chess.BLACK].piece_square_score_midgame[chess.PAWN]) == -66
-    )
+    assert eval.eval_result[chess.WHITE].piece_square_score_midgame[chess.PAWN] == -66
+    assert eval.eval_result[chess.BLACK].piece_square_score_midgame[chess.PAWN] == -66
 
 
 def test_if_evaluation_calculates_king_shield_bonus_correctly():
@@ -60,3 +56,30 @@ def test_if_evaluation_calculates_king_shield_bonus_correctly1():
 
     assert eval.eval_result[chess.WHITE].king_shield_bonus == 25
     assert eval.eval_result[chess.BLACK].king_shield_bonus == 25
+
+
+def test_if_evaluation_calculates_passed_pawn_bonus_correctly():
+    board = chess.Board("rnbqkbnr/ppppp3/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 0 1")
+    eval = evaluation.Evaluation(board)
+    eval.evaluate()
+
+    assert eval.eval_result[chess.WHITE].passed_pawn_bonus == 20
+    assert eval.eval_result[chess.BLACK].passed_pawn_bonus == 0
+
+
+def test_if_evaluation_calculates_passed_pawn_bonus_correctly1():
+    board = chess.Board("rnbqkbnr/ppppp2p/7p/8/8/8/PPPPPP2/RNBQKBNR w KQkq - 0 1")
+    eval = evaluation.Evaluation(board)
+    eval.evaluate()
+
+    assert eval.eval_result[chess.WHITE].passed_pawn_bonus == 0
+    assert eval.eval_result[chess.BLACK].passed_pawn_bonus == 20
+
+
+def test_if_evaluation_calculates_passed_pawn_bonus_correctly2():
+    board = chess.Board("rnbqkbnr/p4p1p/7p/8/8/8/PPPPPP2/RNBQKBNR w KQkq - 0 1")
+    eval = evaluation.Evaluation(board)
+    eval.evaluate()
+
+    assert eval.eval_result[chess.WHITE].passed_pawn_bonus == 40
+    assert eval.eval_result[chess.BLACK].passed_pawn_bonus == 20
