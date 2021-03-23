@@ -104,26 +104,33 @@ class Search:
         best_move = None
         alpha_orig = alpha
         moves = []
-        debug_info = {"moves_analysis": [], "positions_analyzed": 0, "cache_hits": 0}
+        debug_info = {
+            "moves_analysis": [],
+            "positions_analyzed": 0,
+            "cache_hits": 0,
+            "cache_cutoffs": 0,
+        }
 
         cached = self.cache[self.board]
-        if cached and cached.entry_depth >= depth_left:
-            if cached.flag == EXACT:
-                move = cached.move if not move else move
-                debug_info["positions_analyzed"] += 1
-                debug_info["cache_hits"] += 1
-                moves.append(move)
-                return moves, cached.val, debug_info
-            elif cached.flag == LOWER:
-                alpha = max(alpha, cached.val)
-            elif cached.flag == UPPER:
-                beta = min(beta, cached.val)
-            if alpha >= beta:
-                move = cached.move if not move else move
-                debug_info["positions_analyzed"] += 1
-                debug_info["cache_hits"] += 1
-                moves.append(move)
-                return moves, cached.val, debug_info
+        if cached:
+            debug_info["cache_hits"] += 1
+            if cached.entry_depth >= depth_left:
+                if cached.flag == EXACT:
+                    move = cached.move if not move else move
+                    debug_info["positions_analyzed"] += 1
+                    debug_info["cache_cutoffs"] += 1
+                    moves.append(move)
+                    return moves, cached.val, debug_info
+                elif cached.flag == LOWER:
+                    alpha = max(alpha, cached.val)
+                elif cached.flag == UPPER:
+                    beta = min(beta, cached.val)
+                if alpha >= beta:
+                    move = cached.move if not move else move
+                    debug_info["positions_analyzed"] += 1
+                    debug_info["cache_cutoffs"] += 1
+                    moves.append(move)
+                    return moves, cached.val, debug_info
 
         if depth_left <= 0 or self.board.is_game_over():
             moves.append(move)
@@ -135,6 +142,9 @@ class Search:
             )
 
         move_list_to_choose_from = evaluation.Evaluation(self.board).move_order()
+
+        if cached:
+            move_list_to_choose_from.insert(0, cached.move)
 
         if (
             previous_moves
@@ -159,6 +169,7 @@ class Search:
             )
             debug_info["positions_analyzed"] += new_debug_info["positions_analyzed"]
             debug_info["cache_hits"] += new_debug_info["cache_hits"]
+            debug_info["cache_cutoffs"] += new_debug_info["cache_cutoffs"]
 
             self.board.pop()
 
