@@ -154,7 +154,6 @@ class Search:
             debug_info["moves_analysis"].append(
                 (
                     str(san),
-                    str(evaluation.Evaluation(self.board).evaluate()),
                     score,
                 )
             )
