@@ -60,7 +60,7 @@ class Evaluation:
             self.evaluate_tempo(color)
             self.evaluate_blocked_pieces(color)
             self.evaluate_king_shield(color)
-            self.evaluate_passed_pawns(color)
+        self.evaluate_passed_pawns()
 
         self.combine_results()
 
@@ -136,27 +136,43 @@ class Evaluation:
 
     def evaluate_material_score(self, color: chess.Color) -> None:
         for piece_type in chess.PIECE_TYPES:
-            pieces = list(self.board.pieces(piece_type, color))
-            if color == chess.BLACK:
-                pieces = [chess.square_mirror(i) for i in pieces]
+            mask = chess.BB_EMPTY
+            if piece_type == chess.PAWN:
+                mask = self.board.pawns & self.board.occupied_co[color]
+            elif piece_type == chess.KNIGHT:
+                mask = self.board.knights & self.board.occupied_co[color]
+            elif piece_type == chess.BISHOP:
+                mask = self.board.bishops & self.board.occupied_co[color]
+            elif piece_type == chess.ROOK:
+                mask = self.board.rooks & self.board.occupied_co[color]
+            elif piece_type == chess.QUEEN:
+                mask = self.board.queens & self.board.occupied_co[color]
+            elif piece_type == chess.KING:
+                mask = self.board.kings & self.board.occupied_co[color]
+            else:
+                continue
 
-            self.eval_result[color].piece_square_score_midgame[piece_type] = [
-                score_tables.piece_square_tables[piece_type][i] for i in list(pieces)
-            ]
-            self.eval_result[color].piece_square_score_endgame[piece_type] = [
-                score_tables.piece_square_tables_endgame[piece_type][i]
-                for i in list(pieces)
-            ]
+            if color == chess.BLACK:
+                mask = chess.flip_vertical(mask)
+
+            for index in chess.SquareSet(mask):
+                self.eval_result[color].piece_square_score_midgame[
+                    piece_type
+                ] += score_tables.piece_square_tables[piece_type][index]
+                self.eval_result[color].piece_square_score_endgame[
+                    piece_type
+                ] += score_tables.piece_square_tables_endgame[piece_type][index]
+
             self.eval_result[color].piece_score[piece_type] = (
-                len(pieces) * score_tables.piece_values[piece_type]
+                len(chess.SquareSet(mask)) * score_tables.piece_values[piece_type]
             )
 
             self.eval_result[color].material_score_midgame += (
-                sum(self.eval_result[color].piece_square_score_midgame[piece_type])
+                self.eval_result[color].piece_square_score_midgame[piece_type]
                 + self.eval_result[color].piece_score[piece_type]
             )
             self.eval_result[color].material_score_endgame += (
-                sum(self.eval_result[color].piece_square_score_endgame[piece_type])
+                self.eval_result[color].piece_square_score_endgame[piece_type]
                 + self.eval_result[color].piece_score[piece_type]
             )
 
@@ -309,34 +325,44 @@ class Evaluation:
             color
         ].king_shield_bonus
 
-    def evaluate_passed_pawns(self, color: chess.Color) -> None:
-        bb_enemy_spans = chess.BB_EMPTY
-        for pawn in self.board.pieces(chess.PAWN, not color):
-            ranks_to_go = chess.BB_RANKS[chess.square_rank(pawn) + 1 : 8]
-            if color != chess.BLACK:
-                ranks_to_go = chess.BB_RANKS[0 : chess.square_rank(pawn)]
+    def evaluate_passed_pawns(self) -> None:
+        def fill_down_board(bb: int):
+            bb |= bb >> 8
+            bb |= bb >> 16
+            bb |= bb >> 32
+            return bb
 
-            files_to_go = chess.BB_FILES[
-                max(0, chess.square_file(pawn) - 1) : min(
-                    8, chess.square_file(pawn) + 2
-                )
-            ]
+        def fill_up_board(bb: int):
+            bb |= (bb << 8) & chess.BB_ALL
+            bb |= (bb << 16) & chess.BB_ALL
+            bb |= (bb << 32) & chess.BB_ALL
+            return bb
 
-            bb_ranks = functools.reduce(operator.or_, ranks_to_go)
-            bb_files = functools.reduce(operator.or_, files_to_go)
-            bb_front_of_pawn = bb_ranks & bb_files
-            bb_enemy_spans |= bb_front_of_pawn
+        pawns_w = self.board.pawns & self.board.occupied_co[chess.WHITE]
+        pawns_b = self.board.pawns & self.board.occupied_co[chess.BLACK]
 
-        passed_pawns = chess.SquareSet(
-            self.board.pawns & self.board.occupied_co[color] & ~bb_enemy_spans
+        pawn_attacks_ah_w = (pawns_w << 9) & chess.BB_ALL & ~chess.BB_FILE_A
+        pawn_attacks_ha_w = (pawns_w << 7) & chess.BB_ALL & ~chess.BB_FILE_H
+        pawn_attacks_w = pawn_attacks_ah_w | pawn_attacks_ha_w
+        # isolated_pawns_w = pawns_w & ~fill_down_board(fill_up_board(pawn_attacks_w))
+
+        pawn_attacks_ah_b = (pawns_b >> 7) & chess.BB_ALL & ~chess.BB_FILE_A
+        pawn_attacks_ha_b = (pawns_b >> 9) & chess.BB_ALL & ~chess.BB_FILE_H
+        pawn_attacks_b = pawn_attacks_ah_b | pawn_attacks_ha_b
+        # isolated_pawns_b = pawns_b & ~fill_down_board(fill_up_board(pawn_attacks_b))
+
+        open_pawns_w = pawns_w & ~fill_down_board(self.board.pawns >> 8)
+        open_pawns_b = pawns_b & ~fill_up_board((self.board.pawns << 8) & chess.BB_ALL)
+        passed_pawns_w = open_pawns_w & ~fill_down_board(pawn_attacks_b)
+        passed_pawns_b = open_pawns_b & ~fill_down_board(pawn_attacks_w)
+
+        self.eval_result[chess.WHITE].passed_pawn_bonus = sum(
+            score_tables.additional_piece_square_tables["passed_pawn"][pawn]
+            for pawn in list(chess.SquareSet(passed_pawns_w))
         )
-        if color == chess.BLACK:
-            passed_pawns = [chess.square_mirror(pawn) for pawn in list(passed_pawns)]
-        self.eval_result[color].passed_pawn_bonus += sum(
-            [
-                score_tables.additional_piece_square_tables["passed_pawn"][pawn]
-                for pawn in list(passed_pawns)
-            ]
+        self.eval_result[chess.BLACK].passed_pawn_bonus = sum(
+            score_tables.additional_piece_square_tables["passed_pawn"][pawn]
+            for pawn in list(chess.SquareSet(chess.flip_vertical(passed_pawns_b)))
         )
 
     def attacked_by_inferior_piece(
