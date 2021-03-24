@@ -11,7 +11,7 @@ def test_if_search_runs_without_error():
 
 def test_if_engine_can_play_itself():
     board = chess.Board()
-    while not board.is_game_over():
+    while not board.is_game_over(claim_draw=True):
         search_obj = search.Search(board, 1, 0, 0)
         result = search_obj.next_move_by_engine()
         board.push(result[0])

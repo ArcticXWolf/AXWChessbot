@@ -42,6 +42,10 @@ class GoCommandArgs:
             and self.inc[chess.BLACK] is not None
         )
 
+    @staticmethod
+    def default_args():
+        return GoCommandArgs("go wtime 600000 btime 600000 winc 10000 binc 10000")
+
 
 class Uci:
     def __init__(self, abdepth=40, qdepth=6, timeout=180):
@@ -95,6 +99,8 @@ class Uci:
             go_args = GoCommandArgs(msg)
             if go_args.has_args and go_args.has_timing_info:
                 self.set_depth_by_timing(go_args)
+            else:
+                self.set_depth_by_timing(GoCommandArgs.default_args())
             start_search = timer()
             search_obj = search.Search(
                 self.board, self.abdepth, self.qdepth, self.timeout, self.cache
@@ -113,7 +119,12 @@ class Uci:
                 f"info score cp {int(score)} depth {info.get('depth_reached', 0)} nodes {info.get('positions_analyzed', 0)}"
             )
             self.output(f"bestmove {move.uci()}")
-            return
+            return move
+
+        if msg[0:1] == ".":
+            move = self.command("go")
+            self.board.push(move)
+            self.output(f"{str(self.board.unicode())}")
 
     def output(self, msg):
         print(msg)

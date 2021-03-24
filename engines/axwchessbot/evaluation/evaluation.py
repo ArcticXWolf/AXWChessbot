@@ -22,6 +22,7 @@ class EvaluationResult:
         self.pair_bonus = 0
         self.rook_bonus = 0
         self.tempo_bonus = 0
+        self.mobility_bonus = 0
         self.blocked_pieces_score = 0
         self.king_shield_bonus = 0
         self.passed_pawn_bonus = 0
@@ -60,6 +61,7 @@ class Evaluation:
             self.evaluate_tempo(color)
             self.evaluate_blocked_pieces(color)
             self.evaluate_king_shield(color)
+            self.evaluate_mobility(color)
         self.evaluate_passed_pawns()
 
         self.combine_results()
@@ -99,6 +101,8 @@ class Evaluation:
         self.total_score -= self.eval_result[chess.BLACK].rook_bonus
         self.total_score += self.eval_result[chess.WHITE].tempo_bonus
         self.total_score -= self.eval_result[chess.BLACK].tempo_bonus
+        self.total_score += self.eval_result[chess.WHITE].mobility_bonus
+        self.total_score -= self.eval_result[chess.BLACK].mobility_bonus
         self.total_score += self.eval_result[chess.WHITE].blocked_pieces_score
         self.total_score -= self.eval_result[chess.BLACK].blocked_pieces_score
         # kingshield bonus is included in material_score_midgame
@@ -110,10 +114,10 @@ class Evaluation:
             self.total_score_perspective = -self.total_score
 
     def evaluate_gameover(self) -> float:
-        if not self.board.is_game_over():
+        if not self.board.is_game_over(claim_draw=True):
             return None
 
-        result = self.board.result()
+        result = self.board.result(claim_draw=True)
         if result == "0-1":
             return float("-inf")
         elif result == "1-0":
@@ -189,6 +193,13 @@ class Evaluation:
             self.eval_result[color].tempo_bonus += score_tables.additional_modifiers[
                 "tempo"
             ]
+
+    def evaluate_mobility(self, color: chess.Color) -> None:
+        board = self.board.copy()
+        if board.turn != color:
+            board.push(chess.Move.null())
+
+        self.eval_result[color].mobility_bonus += len(list(board.legal_moves))
 
     def evaluate_pair_bonus(self, color: chess.Color) -> None:
         if len(self.board.pieces(chess.BISHOP, color)) > 1:

@@ -42,6 +42,7 @@ lichess provides enough resources for an average search depth of 3-4 plys.
     * Quiescence search
     * Iterative deepening
     * Move ordering
+    * Killer move heuristic
     * Transposition tables as cache
     * Opening books
     * Endgame tables

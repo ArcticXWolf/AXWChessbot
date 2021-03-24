@@ -38,6 +38,7 @@ class Search:
         self.quiesce_depth = quiesce_depth
         self.cache = TranspositionTable(1e7)
         self.timeout = timeout
+        self.killer_moves = {}
 
         if cache:
             self.cache = cache
@@ -99,6 +100,7 @@ class Search:
         beta: float = float("inf"),
         move=None,
         previous_moves=None,
+        ply=0,
     ) -> Tuple:
         best_score = float("-inf")
         best_move = None
@@ -143,22 +145,44 @@ class Search:
 
         move_list_to_choose_from = evaluation.Evaluation(self.board).move_order()
 
-        if cached:
-            move_list_to_choose_from.insert(0, cached.move)
+        if ply in self.killer_moves:
+            if self.killer_moves[ply][1] is not None:
+                try:
+                    move_list_to_choose_from.remove(self.killer_moves[ply][1])
+                    move_list_to_choose_from.insert(0, self.killer_moves[ply][1])
+                except ValueError:
+                    pass
+            if self.killer_moves[ply][0] is not None:
+                try:
+                    move_list_to_choose_from.remove(self.killer_moves[ply][0])
+                    move_list_to_choose_from.insert(0, self.killer_moves[ply][0])
+                except ValueError:
+                    pass
 
         if (
             previous_moves
             and len(previous_moves) > depth_left
             and previous_moves[depth_left - 1] in move_list_to_choose_from
         ):
-            move_list_to_choose_from.insert(0, previous_moves[depth_left - 1])
+            try:
+                move_list_to_choose_from.remove(previous_moves[depth_left - 1])
+                move_list_to_choose_from.insert(0, previous_moves[depth_left - 1])
+            except ValueError:
+                pass
+
+        if cached:
+            try:
+                move_list_to_choose_from.remove(cached.move)
+                move_list_to_choose_from.insert(0, cached.move)
+            except ValueError:
+                pass
 
         for m in move_list_to_choose_from:
             san = self.board.san(m)
             self.board.push(m)
 
             new_moves, score, new_debug_info = self.alpha_beta_search(
-                depth_left - 1, -beta, -alpha, m, previous_moves
+                depth_left - 1, -beta, -alpha, m, previous_moves, ply + 1
             )
             score = -score
             debug_info["moves_analysis"].append(
@@ -180,6 +204,7 @@ class Search:
             if score > alpha:
                 alpha = score
             if alpha >= beta:
+                self.update_killer_moves(ply, m)
                 break
 
         if best_score <= alpha_orig:
@@ -205,7 +230,7 @@ class Search:
         if alpha < stand_pat:
             alpha = stand_pat
 
-        if depth_left > 0 or not self.board.is_game_over():
+        if depth_left > 0 or not self.board.is_game_over(claim_draw=True):
             for move in self.get_captures_by_value():
                 if self.board.is_capture(move):
                     self.board.push(move)
@@ -217,6 +242,16 @@ class Search:
                     if score > alpha:
                         alpha = score
         return alpha
+
+    def update_killer_moves(self, ply: int, new_move: chess.Move) -> None:
+        if not self.board.is_capture(new_move):
+            if ply not in self.killer_moves:
+                self.killer_moves[ply] = [new_move, None]
+                return
+
+            if new_move != self.killer_moves[ply][0]:
+                self.killer_moves[ply][1] = self.killer_moves[ply][0]
+            self.killer_moves[ply][0] = new_move
 
     def next_move_by_opening_db(self):
         try:
