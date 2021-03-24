@@ -1,10 +1,15 @@
 from . import events
-import logging
 
 
 class Eventmanager:
     def __init__(self, conversation):
         self.conversation = conversation
+
+        self.handle_event_setups()
+
+    def handle_event_setups(self):
+        for event_class in self.registered_events():
+            event_class.setup_class()
 
     def registered_events(self):
         return events.BaseEvent.__subclasses__()

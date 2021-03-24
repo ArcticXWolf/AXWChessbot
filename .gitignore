@@ -4,5 +4,6 @@ __pycache__
 /engines/*
 !/engines/axwchessbot
 !/engines/README.md
+/chatterer/events/opening_db/*.tsv
 .vscode
 .coverage

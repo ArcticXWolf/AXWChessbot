@@ -1,6 +1,11 @@
 from .base_event import BaseEvent
 import chess
-import logging
+import random
+
+STRINGS_MSG = [
+    "Do I spot a Botez Gambit? :D",
+    "Ha! Got your queen!",
+]
 
 
 class QueenWonEvent(BaseEvent):
@@ -17,4 +22,4 @@ class QueenWonEvent(BaseEvent):
         return False
 
     def react_with(self, board: chess.Board, game):
-        return f"Ah, the Botez Gambit. Classic."
+        return random.choice(STRINGS_MSG)

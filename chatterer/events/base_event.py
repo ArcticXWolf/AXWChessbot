@@ -1,4 +1,8 @@
 class BaseEvent:
+    @staticmethod
+    def setup_class():
+        pass
+
     def __init__(self):
         pass
 
