@@ -1,5 +1,6 @@
 import sys
 import chess
+from evaluation.evaluation import Evaluation
 from search import search
 from timeit import default_timer as timer
 
@@ -105,18 +106,14 @@ class Uci:
             search_obj = search.Search(
                 self.board, self.abdepth, self.qdepth, self.timeout, self.cache
             )
-            move, info = search_obj.next_move()
+            move = search_obj.next_move()
             self.cache = search_obj.cache
             end_search = timer()
+            score = Evaluation(self.board).evaluate().total_score_perspective
 
-            info.pop("moves_analysis")
-            score = info.get("current_eval", 0.0)
-            if self.board.turn == chess.BLACK:
-                score = -score
-
-            self.debug(f"[{end_search - start_search :.2f}] {str(info)}")
+            self.debug(f"[{end_search - start_search :.2f}] {str(search_obj)}")
             self.output(
-                f"info score cp {int(score)} depth {info.get('depth_reached', 0)} nodes {info.get('positions_analyzed', 0)}"
+                f"info score cp {int(score)} depth {search_obj.max_depth_used} nodes {search_obj.nodes_traversed}"
             )
             self.output(f"bestmove {move.uci()}")
             return move

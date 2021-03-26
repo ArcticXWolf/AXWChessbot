@@ -2,6 +2,7 @@ import chess
 from search import search
 from tests import puzzles
 from timeit import default_timer as timer
+import yaml
 
 
 class Benchmark:
@@ -21,11 +22,10 @@ class Benchmark:
         bench_start = timer()
         single_tests = []
         for test in puzzles.wac.tests[: self.num_positions]:
-            self.print(f"Running test: {test}", end="", flush=True)
+            self.print(f"Running test: {test}")
             test_start = timer()
             self.run_test(test)
             test_end = timer()
-            self.print(f" | {test_end - test_start:.3f} sec")
             single_tests.append((test, test_end - test_start))
         bench_end = timer()
         self.print(f"Full runtime: {bench_end - bench_start:.3f} sec")
@@ -36,8 +36,8 @@ class Benchmark:
         board = chess.Board()
         board.set_epd(test)
         search_obj = search.Search(board, self.abdepth, self.qdepth, 0)
-        _, info = search_obj.next_move_by_engine()
-        self.print(f" | {info['current_eval']}", end="", flush=True)
+        search_obj.next_move_by_engine()
+        self.print(yaml.dump(search_obj.get_measurements(show_cache=True), indent=4))
 
     def print(self, *args, **kwargs):
         if self.output:

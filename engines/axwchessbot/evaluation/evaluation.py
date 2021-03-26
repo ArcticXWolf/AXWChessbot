@@ -1,10 +1,8 @@
 from __future__ import annotations
-from typing import Tuple
 import chess
+
+from evaluation.game_over_detection import GameOverDetection
 from . import score_tables
-import functools
-import itertools
-import operator
 
 
 class EvaluationResult:
@@ -61,7 +59,7 @@ class Evaluation:
             self.evaluate_tempo(color)
             self.evaluate_blocked_pieces(color)
             self.evaluate_king_shield(color)
-            self.evaluate_mobility(color)
+            # self.evaluate_mobility(color)
         self.evaluate_passed_pawns()
 
         self.combine_results()
@@ -114,14 +112,11 @@ class Evaluation:
             self.total_score_perspective = -self.total_score
 
     def evaluate_gameover(self) -> float:
-        if not self.board.is_game_over(claim_draw=True):
+        if not GameOverDetection.is_game_over(self.board):
             return None
 
-        result = self.board.result(claim_draw=True)
-        if result == "0-1":
-            return float("-inf")
-        elif result == "1-0":
-            return float("inf")
+        if self.board.is_checkmate():
+            return float("-inf") if self.board.turn == chess.WHITE else float("inf")
 
         # draw, calculate contempt factor via gamephase
         # on midgame, +60 for enemy
@@ -129,7 +124,7 @@ class Evaluation:
         draw_score = (
             float(
                 self.eval_result[chess.WHITE].gamephase
-                + self.eval_result[chess.WHITE].gamephase
+                + self.eval_result[chess.BLACK].gamephase
             )
             * 60.0
             / 24.0
