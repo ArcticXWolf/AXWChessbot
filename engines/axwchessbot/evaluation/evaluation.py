@@ -441,20 +441,16 @@ class Evaluation:
             medium_moves.insert(0, move)
         return good_moves + medium_moves + bad_moves
 
-    def capture_value(self, move: chess.Move):
-        if not self.board.is_capture(move):
-            return 0
-
-        from_piece = self.board.piece_at(move.from_square)
-        to_piece = self.board.piece_at(move.to_square)
-
-        if self.board.is_en_passant(move):
-            return score_tables.piece_values[chess.PAWN]
-        else:
-            return (
-                score_tables.piece_values[to_piece.piece_type]
-                - score_tables.piece_values[from_piece.piece_type]
+    def capture_order(self) -> list:
+        def sort_function(move):
+            if self.board.is_en_passant(move):
+                return -(score_tables.piece_values[chess.PAWN] + (10 - chess.PAWN))
+            return -(
+                score_tables.piece_values[self.board.piece_type_at(move.to_square)]
+                + (10 - self.board.piece_type_at(move.from_square))
             )
+
+        return sorted(self.board.generate_legal_captures(), key=sort_function)
 
     def __str__(self) -> str:
         result = "---------- EVAL ---------- \n"

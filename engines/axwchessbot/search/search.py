@@ -289,14 +289,7 @@ class Search:
         return chosen_move
 
     def get_captures_by_value(self):
-        def sort_function(move):
-            return evaluation.Evaluation(self.board).capture_value(move)
-
-        captures = [
-            move for move in self.board.legal_moves if self.board.is_capture(move)
-        ]
-        captures_ordered = sorted(captures, key=sort_function, reverse=True)
-        return list(captures_ordered)
+        return evaluation.Evaluation(self.board).capture_order()
 
     def get_measurements(
         self, show_exact_timings: bool = False, show_cache: bool = False
