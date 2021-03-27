@@ -216,7 +216,7 @@ class Search:
             alpha = stand_pat
 
         if depth_left > 0 or not GameOverDetection.is_game_over(self.board):
-            for move in self.get_captures_by_value():
+            for move in evaluation.Evaluation(self.board).capture_order():
                 if self.board.is_capture(move):
                     self.board.push(move)
                     score = -self.quiesce_search(-beta, -alpha, depth_left - 1)
@@ -287,9 +287,6 @@ class Search:
 
         tablebase.close()
         return chosen_move
-
-    def get_captures_by_value(self):
-        return evaluation.Evaluation(self.board).capture_order()
 
     def get_measurements(
         self, show_exact_timings: bool = False, show_cache: bool = False
