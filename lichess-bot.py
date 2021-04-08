@@ -100,6 +100,7 @@ def start(li, user_profile, engine_factory, config):
     busy_processes = 0
     queued_processes = 0
     automatic_challenge_timer = None
+    automatic_challenge_first_start = True
     ai_level = 0
 
     with logging_pool.LoggingPool(max_games + 1) as pool:
@@ -200,11 +201,17 @@ def start(li, user_profile, engine_factory, config):
 
             if config.get("automatic_challenge", False):
                 if queued_processes == 0 and busy_processes == 0:
-                    if automatic_challenge_timer is None:
-                        automatic_challenge_timer = timer()
-                    elif timer() - automatic_challenge_timer >= config.get(
-                        "automatic_challenge_timer", 1800
+                    if (
+                        automatic_challenge_timer is None
+                        and not automatic_challenge_first_start
                     ):
+                        automatic_challenge_timer = timer()
+                    elif (
+                        automatic_challenge_timer is not None
+                        and timer() - automatic_challenge_timer
+                        >= config.get("automatic_challenge_timer", 1800)
+                    ) or automatic_challenge_first_start:
+                        automatic_challenge_first_start = False
                         challenge_bots_stream = multiprocessing.Process(
                             target=do_automatic_challenge, args=[li, bots_list]
                         )

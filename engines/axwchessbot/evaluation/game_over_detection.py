@@ -9,16 +9,18 @@ import collections
 # We dont need this claiming mechanic here, so we implement our own
 # detection. (Speedup of 2x)
 class GameOverDetection:
-    def is_game_over(board) -> bool:
-        if board.is_seventyfive_moves():
-            return True
+    def is_game_over(board: chess.Board) -> bool:
+        any_moves_left = any(board.generate_legal_moves())
+        if board.halfmove_clock >= 150:
+            if any_moves_left:
+                return True
 
         # Insufficient material.
         if board.is_insufficient_material():
             return True
 
         # Stalemate or checkmate.
-        if not any(board.generate_legal_moves()):
+        if not any_moves_left:
             return True
 
         # Fivefold repetition.
@@ -35,7 +37,7 @@ class GameOverDetection:
 
         return False
 
-    def is_threefold_repetition(board) -> bool:
+    def is_threefold_repetition(board: chess.Board) -> bool:
         transposition_key = board._transposition_key()
         transpositions = collections.Counter()
         transpositions.update((transposition_key,))

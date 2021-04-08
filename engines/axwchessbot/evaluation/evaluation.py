@@ -393,7 +393,14 @@ class Evaluation:
     def attackers_of_square(self, square: chess.Square):
         return self.board.attackers(not self.board.turn, square)
 
-    def move_order(self):
+    def move_order(
+        self,
+        depth_left: int,
+        ply: int,
+        cache,
+        pv_moves: list = None,
+        killer_moves: list = None,
+    ):
         good_moves = []
         medium_moves = []
         bad_moves = []
@@ -439,7 +446,189 @@ class Evaluation:
                 continue
 
             medium_moves.insert(0, move)
-        return good_moves + medium_moves + bad_moves
+        move_list_to_choose_from = good_moves + medium_moves + bad_moves
+
+        if ply in killer_moves:
+            if killer_moves[ply][1] is not None:
+                try:
+                    move_list_to_choose_from.remove(killer_moves[ply][1])
+                    move_list_to_choose_from.insert(0, killer_moves[ply][1])
+                except ValueError:
+                    pass
+            if killer_moves[ply][0] is not None:
+                try:
+                    move_list_to_choose_from.remove(killer_moves[ply][0])
+                    move_list_to_choose_from.insert(0, killer_moves[ply][0])
+                except ValueError:
+                    pass
+
+        if (
+            pv_moves
+            and len(pv_moves) > depth_left
+            and pv_moves[depth_left - 1] in move_list_to_choose_from
+        ):
+            try:
+                move_list_to_choose_from.remove(pv_moves[depth_left - 1])
+                move_list_to_choose_from.insert(0, pv_moves[depth_left - 1])
+            except ValueError:
+                pass
+
+        if cache:
+            try:
+                move_list_to_choose_from.remove(cache.move)
+                move_list_to_choose_from.insert(0, cache.move)
+            except ValueError:
+                pass
+
+        return move_list_to_choose_from
+
+    def move_order2(
+        self,
+        depth_left: int,
+        ply: int,
+        cache,
+        pv_moves: list = None,
+        killer_moves: list = None,
+    ):
+        priority_moves = [[], [], []]
+        good_moves = []
+        medium_moves = []
+        bad_moves = []
+
+        move: chess.Move
+        for move in self.board.legal_moves:
+            move_text = self.board.san(move)
+
+            if "#" in move_text:
+                return [move]
+
+            if cache is not None and move == cache.move:
+                priority_moves[0].append(move)
+
+            if (
+                pv_moves is not None
+                and len(pv_moves) > depth_left
+                and pv_moves[depth_left - 1] == move
+            ):
+                priority_moves[1].append(move)
+
+            if ply in killer_moves:
+                if killer_moves[ply][0] is not None and killer_moves[ply][0] == move:
+                    priority_moves[2].append(move)
+                if killer_moves[ply][1] is not None and killer_moves[ply][1] == move:
+                    priority_moves[2].append(move)
+
+            if self.board.is_capture(move):
+                if self.board.piece_at(move.from_square) == chess.PAWN:
+                    good_moves.append(move)
+                    continue
+                elif not self.board.is_attacked_by(not self.board.turn, move.to_square):
+                    good_moves.append(move)
+                    continue
+                else:
+                    medium_moves.append(move)
+                    continue
+
+            if self.board.piece_at(move.from_square) == chess.QUEEN:
+                if self.board.is_attacked_by(not self.board.turn, move.to_square):
+                    bad_moves.append(move)
+                    continue
+
+            if self.attacked_by_inferior_piece(move, False):
+                if self.attacked_by_inferior_piece(move, True):
+                    bad_moves.append(move)
+                    continue
+                else:
+                    if len(self.defenders_of_square(move.to_square)) >= len(
+                        self.attackers_of_square(move.to_square)
+                    ):
+                        good_moves.append(move)
+                        continue
+                    else:
+                        bad_moves.append(move)
+                        continue
+            elif self.attacked_by_inferior_piece(move, True):
+                bad_moves.append(move)
+                continue
+
+            medium_moves.append(move)
+        return (
+            priority_moves[0]
+            + priority_moves[1]
+            + priority_moves[2]
+            + good_moves
+            + medium_moves
+            + bad_moves
+        )
+
+    def move_order3(
+        self,
+        depth_left: int,
+        ply: int,
+        cache,
+        pv_moves: list = None,
+        killer_moves: list = None,
+    ):
+        moves = []
+
+        move: chess.Move
+        for move in self.board.legal_moves:
+            move_text = self.board.san(move)
+
+            if "#" in move_text:
+                return [move]
+
+            if cache is not None and move == cache.move:
+                moves.append((0, move))
+
+            if (
+                pv_moves is not None
+                and len(pv_moves) > depth_left
+                and pv_moves[depth_left - 1] == move
+            ):
+                moves.append((1, move))
+
+            if ply in killer_moves:
+                if killer_moves[ply][0] is not None and killer_moves[ply][0] == move:
+                    moves.append((2, move))
+                if killer_moves[ply][1] is not None and killer_moves[ply][1] == move:
+                    moves.append((2, move))
+
+            if self.board.is_capture(move):
+                if self.board.piece_at(move.from_square) == chess.PAWN:
+                    moves.append((3, move))
+                    continue
+                elif not self.board.is_attacked_by(not self.board.turn, move.to_square):
+                    moves.append((3, move))
+                    continue
+                else:
+                    moves.append((4, move))
+                    continue
+
+            if self.board.piece_at(move.from_square) == chess.QUEEN:
+                if self.board.is_attacked_by(not self.board.turn, move.to_square):
+                    moves.append((5, move))
+                    continue
+
+            if self.attacked_by_inferior_piece(move, False):
+                if self.attacked_by_inferior_piece(move, True):
+                    moves.append((5, move))
+                    continue
+                else:
+                    if len(self.defenders_of_square(move.to_square)) >= len(
+                        self.attackers_of_square(move.to_square)
+                    ):
+                        moves.append((3, move))
+                        continue
+                    else:
+                        moves.append((5, move))
+                        continue
+            elif self.attacked_by_inferior_piece(move, True):
+                moves.append((5, move))
+                continue
+
+            moves.append((4, move))
+        return [i[1] for i in sorted(moves, key=lambda tup: tup[0])]
 
     def capture_order(self) -> list:
         def sort_function(move):

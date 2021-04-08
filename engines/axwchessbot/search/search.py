@@ -138,39 +138,9 @@ class Search:
                     self.cache_cutoffs += 1
                     return moves, cached.val
 
-        move_list_to_choose_from = evaluation.Evaluation(self.board).move_order()
-
-        if ply in self.killer_moves:
-            if self.killer_moves[ply][1] is not None:
-                try:
-                    move_list_to_choose_from.remove(self.killer_moves[ply][1])
-                    move_list_to_choose_from.insert(0, self.killer_moves[ply][1])
-                except ValueError:
-                    pass
-            if self.killer_moves[ply][0] is not None:
-                try:
-                    move_list_to_choose_from.remove(self.killer_moves[ply][0])
-                    move_list_to_choose_from.insert(0, self.killer_moves[ply][0])
-                except ValueError:
-                    pass
-
-        if (
-            previous_moves
-            and len(previous_moves) > depth_left
-            and previous_moves[depth_left - 1] in move_list_to_choose_from
-        ):
-            try:
-                move_list_to_choose_from.remove(previous_moves[depth_left - 1])
-                move_list_to_choose_from.insert(0, previous_moves[depth_left - 1])
-            except ValueError:
-                pass
-
-        if cached:
-            try:
-                move_list_to_choose_from.remove(cached.move)
-                move_list_to_choose_from.insert(0, cached.move)
-            except ValueError:
-                pass
+        move_list_to_choose_from = evaluation.Evaluation(self.board).move_order2(
+            depth_left, ply, cached, previous_moves, self.killer_moves
+        )
 
         for m in move_list_to_choose_from:
             self.board.push(m)
