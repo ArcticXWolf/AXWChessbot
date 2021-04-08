@@ -680,7 +680,7 @@ def do_automatic_challenge(li, bots_list):
                     logger.info(f"+++ Challenging: {bot['username']}")
                     try:
                         result = li.challenge_player(
-                            bot["username"], "true", 300, 3, "random"
+                            bot["username"], "true", 600, 10, "random"
                         )
                     except HTTPError as e:
                         logger.info(str(e.response.content))
@@ -688,7 +688,7 @@ def do_automatic_challenge(li, bots_list):
                             time.sleep(70)
                             try:
                                 result = li.challenge_player(
-                                    bot["username"], "true", 300, 3, "random"
+                                    bot["username"], "true", 600, 10, "random"
                                 )
                             except HTTPError as e2:
                                 logger.info(str(e2.response.content))
