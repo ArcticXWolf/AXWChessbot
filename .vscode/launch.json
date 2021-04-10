@@ -5,48 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
-            "type": "python",
+            "name": "Launch Package",
+            "type": "go",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Lichess-Bot",
-            "type": "python",
-            "request": "launch",
-            "program": "lichess-bot.py",
-            "args": [],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Bench",
-            "type": "python",
-            "request": "launch",
-            "program": "engines/axwchessbot/main.py",
-            "args": [
-                "--bench"
-            ],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: UCI",
-            "type": "python",
-            "request": "launch",
-            "program": "engines/axwchessbot/main.py",
-            "args": [],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Tests",
-            "type": "python",
-            "request": "launch",
-            "program": "engines/axwchessbot/main.py",
-            "args": [
-                "--test=True"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": false
+            "mode": "debug",
+            "program": "${workspaceFolder}"
         }
     ]
 }

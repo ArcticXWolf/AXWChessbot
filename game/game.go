@@ -7,6 +7,13 @@ import (
 	"github.com/dylhunn/dragontoothmg"
 )
 
+type PlayerColor bool
+
+const (
+	Black = false
+	White = true
+)
+
 type GameResult uint8
 
 const (
