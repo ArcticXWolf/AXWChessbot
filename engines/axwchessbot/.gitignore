@@ -1,8 +1,0 @@
-__pycache__/
-.venv/
-.vscode/
-ending_db/*.rtbw
-ending_db/*.rtbz
-opening_db/*.bin
-tests/results/*
-!.keep

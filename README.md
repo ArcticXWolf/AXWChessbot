@@ -1,3 +1,8 @@
+# WIP
+
+This branch contains a full rewrite of the engine in golang.
+It is currently work-in-progress, thus no functionality is implemented.
+
 # AXWChessbot
 
 This is a simple chess engine written in python. Its main code can be found
