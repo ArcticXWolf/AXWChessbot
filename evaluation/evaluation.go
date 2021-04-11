@@ -28,7 +28,7 @@ func (e *Evaluation) updateTotal() {
 		if e.Game.Result == game.WhiteWon {
 			e.TotalScore = int(^uint(0) >> 1) // MAX INT
 		} else if e.Game.Result == game.BlackWon {
-			e.TotalScore = -e.TotalScore - 1 // MIN INT
+			e.TotalScore = -int(^uint(0)>>1) - 1 // MIN INT
 		} else {
 			e.TotalScore = 0 // DRAW
 		}
@@ -100,7 +100,7 @@ func calculatePieceScore(g *game.Game, color game.PlayerColor) map[dragontoothmg
 		bboards = g.Position.Black
 	}
 
-	for i := 1; i <= 5; i++ {
+	for i := 1; i <= 6; i++ {
 		bitboard := getBitboardByPieceType(&bboards, dragontoothmg.Piece(i))
 		count := bits.OnesCount64(bitboard)
 		ps[dragontoothmg.Piece(i)] += count * GetWeights().Midgame.Material[dragontoothmg.Piece(i)]
@@ -121,10 +121,9 @@ func getBitboardByPieceType(bbs *dragontoothmg.Bitboards, pieceType dragontoothm
 		return bbs.Rooks
 	case dragontoothmg.Queen:
 		return bbs.Queens
-	case dragontoothmg.King:
+	default:
 		return bbs.Kings
 	}
-	return bbs.All
 }
 
 func sumMapValues(mapToSum map[dragontoothmg.Piece]int) int {

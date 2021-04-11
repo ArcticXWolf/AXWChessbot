@@ -16,10 +16,11 @@ func getWeightsForAllPhases() GamephaseWeights {
 	return GamephaseWeights{
 		Material: map[dragontoothmg.Piece]int{
 			dragontoothmg.Pawn:   100,
-			dragontoothmg.Knight: 300,
-			dragontoothmg.Bishop: 300,
+			dragontoothmg.Knight: 320,
+			dragontoothmg.Bishop: 330,
 			dragontoothmg.Rook:   500,
 			dragontoothmg.Queen:  900,
+			dragontoothmg.King:   0,
 		},
 		PieceSquareTables: map[dragontoothmg.Piece][64]int{
 			dragontoothmg.Pawn: [64]int{
