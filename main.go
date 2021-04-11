@@ -1,25 +1,27 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"os"
 
-	"go.janniklasrichter.de/axwchessbot/evaluation"
-	"go.janniklasrichter.de/axwchessbot/game"
+	"go.janniklasrichter.de/axwchessbot/uci"
+)
+
+const (
+	engineName   = "AXWChessBot"
+	engineAuthor = "Jan Niklas Richter"
+)
+
+var (
+	engineVersion = "undefined"
+	buildDate     = "undefined"
+	gitCommit     = "undefined"
 )
 
 func main() {
-	fens := []string{
-		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RN2KBNR w KQkq - 0 1",
-		"rn2kbnr/pppppppp/8/8/8/8/PPPPPPPP/RN2KBNR w KQkq - 0 1",
-		"rn2kbnr/pp3ppp/8/8/8/8/PPPPPPPP/RN2KBNR w KQkq - 0 1",
-		"rn2kbnr/pp3ppp/8/8/8/8/PPPPPPPP/RN2KBN1 w Qkq - 0 1",
-	}
+	logger := log.New(os.Stderr, "", log.LstdFlags)
 
-	for _, fen := range fens {
-		game := game.NewFromFen(fen)
-		eval := evaluation.CalculateEvaluation(game)
-		fmt.Println("Board: ", game.Position.ToFen())
-		fmt.Println("Evaluation: ", eval.TotalScore)
-	}
+	logger.Println(engineName, "Version", engineVersion, "BuildDate", buildDate, "GitCommitHash", gitCommit)
+
+	uci.StartProtocol(logger, uci.New(engineName, engineAuthor, engineVersion, []uci.UciOption{}))
 }

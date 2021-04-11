@@ -173,7 +173,7 @@ func (g *Game) isDrawnByInsufficientMaterial() bool {
 	return false
 }
 
-func (g *Game) pushMove(moveString string) error {
+func (g *Game) PushMove(moveString string) error {
 	move, err := dragontoothmg.ParseMove(moveString)
 
 	if err != nil {
@@ -190,7 +190,7 @@ func (g *Game) pushMove(moveString string) error {
 	return nil
 }
 
-func (g *Game) popMove() error {
+func (g *Game) PopMove() error {
 	if len(g.Moves) <= 0 {
 		return errors.New("no move to pop in move history")
 	}
