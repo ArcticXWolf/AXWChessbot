@@ -7,7 +7,8 @@ LDFLAGS=-ldflags "-w -s -X main.engineVersion=${VERSION} -X main.buildDate=${BUI
 
 build:
 	echo "Building for linux and windows"
-	GOOS=linux GOARCH=amd64 go build -o build/${BINARY} ${LDFLAGS} go.janniklasrichter.de/axwchessbot
+	GOOS=linux GOARCH=amd64 go build -o build/${BINARY}-linux-amd64 ${LDFLAGS} go.janniklasrichter.de/axwchessbot
+	GOOS=windows GOARCH=amd64 go build -o build/${BINARY}-windows-amd64.exe ${LDFLAGS} go.janniklasrichter.de/axwchessbot
 
 run:
 	go run go.janniklasrichter.de/axwchessbot
