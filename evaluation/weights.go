@@ -1,6 +1,9 @@
 package evaluation
 
-import "github.com/dylhunn/dragontoothmg"
+import (
+	"github.com/dylhunn/dragontoothmg"
+	"go.janniklasrichter.de/axwchessbot/game"
+)
 
 type GamephaseWeights struct {
 	Material          map[dragontoothmg.Piece]int
@@ -12,8 +15,8 @@ type Weights struct {
 	Endgame GamephaseWeights
 }
 
-func getWeightsForAllPhases() GamephaseWeights {
-	return GamephaseWeights{
+var (
+	weightsForAllPhases = GamephaseWeights{
 		Material: map[dragontoothmg.Piece]int{
 			dragontoothmg.Pawn:   100,
 			dragontoothmg.Knight: 320,
@@ -85,32 +88,74 @@ func getWeightsForAllPhases() GamephaseWeights {
 			},
 		},
 	}
-}
+)
 
-func getMidgameWeights() GamephaseWeights {
-	return getWeightsForAllPhases()
-}
+var (
+	midgameWeights = GamephaseWeights{
+		Material:          weightsForAllPhases.Material,
+		PieceSquareTables: weightsForAllPhases.PieceSquareTables,
+	}
+	endgameWeights = GamephaseWeights{
+		Material: weightsForAllPhases.Material,
+		PieceSquareTables: map[dragontoothmg.Piece][64]int{
+			dragontoothmg.Pawn:   weightsForAllPhases.PieceSquareTables[dragontoothmg.Pawn],
+			dragontoothmg.Knight: weightsForAllPhases.PieceSquareTables[dragontoothmg.Knight],
+			dragontoothmg.Bishop: weightsForAllPhases.PieceSquareTables[dragontoothmg.Bishop],
+			dragontoothmg.Rook:   weightsForAllPhases.PieceSquareTables[dragontoothmg.Rook],
+			dragontoothmg.Queen:  weightsForAllPhases.PieceSquareTables[dragontoothmg.Queen],
+			dragontoothmg.King: [64]int{
+				-72, -48, -36, -24, -24, -36, -48, -72,
+				-48, -24, -12, 0, 0, -12, -24, -48,
+				-36, -12, 0, 12, 12, 0, -12, -36,
+				-24, 0, 12, 24, 24, 12, 0, -24,
+				-24, 0, 12, 24, 24, 12, 0, -24,
+				-36, -12, 0, 12, 12, 0, -12, -36,
+				-48, -24, -12, 0, 0, -12, -24, -48,
+				-72, -48, -36, -24, -24, -36, -48, -72,
+			},
+		},
+	}
+)
 
-func getEndgameWeights() GamephaseWeights {
-	gpw := getWeightsForAllPhases()
+func flipPstArrayVertically(pst [64]int) [64]int {
+	var pstNew [64]int
 
-	gpw.PieceSquareTables[dragontoothmg.King] = [64]int{
-		40, 50, 30, 10, 10, 30, 50, 40,
-		30, 40, 20, 0, 0, 20, 40, 30,
-		10, 20, 0, -20, -20, 0, 20, 10,
-		0, 10, -10, -30, -30, -10, 10, 0,
-		-10, 0, -20, -40, -40, -20, 0, -10,
-		-20, -10, -30, -50, -50, -30, -10, -20,
-		-30, -20, -40, -60, -60, -40, -20, -30,
-		-40, -30, -50, -70, -70, -50, -30, -40,
+	for i := 0; i < len(pst); i++ {
+		pstNew[i^0x38] = pst[i]
 	}
 
-	return gpw
+	return pstNew
 }
 
-func GetWeights() Weights {
-	return Weights{
-		Midgame: getMidgameWeights(),
-		Endgame: getEndgameWeights(),
+var (
+	weights = map[game.PlayerColor]Weights{
+		game.White: Weights{
+			Midgame: midgameWeights,
+			Endgame: endgameWeights,
+		},
+		game.Black: Weights{
+			Midgame: GamephaseWeights{
+				Material: midgameWeights.Material,
+				PieceSquareTables: map[dragontoothmg.Piece][64]int{
+					dragontoothmg.Pawn:   flipPstArrayVertically(midgameWeights.PieceSquareTables[dragontoothmg.Pawn]),
+					dragontoothmg.Knight: flipPstArrayVertically(midgameWeights.PieceSquareTables[dragontoothmg.Knight]),
+					dragontoothmg.Bishop: flipPstArrayVertically(midgameWeights.PieceSquareTables[dragontoothmg.Bishop]),
+					dragontoothmg.Rook:   flipPstArrayVertically(midgameWeights.PieceSquareTables[dragontoothmg.Rook]),
+					dragontoothmg.Queen:  flipPstArrayVertically(midgameWeights.PieceSquareTables[dragontoothmg.Queen]),
+					dragontoothmg.King:   flipPstArrayVertically(midgameWeights.PieceSquareTables[dragontoothmg.King]),
+				},
+			},
+			Endgame: GamephaseWeights{
+				Material: endgameWeights.Material,
+				PieceSquareTables: map[dragontoothmg.Piece][64]int{
+					dragontoothmg.Pawn:   flipPstArrayVertically(endgameWeights.PieceSquareTables[dragontoothmg.Pawn]),
+					dragontoothmg.Knight: flipPstArrayVertically(endgameWeights.PieceSquareTables[dragontoothmg.Knight]),
+					dragontoothmg.Bishop: flipPstArrayVertically(endgameWeights.PieceSquareTables[dragontoothmg.Bishop]),
+					dragontoothmg.Rook:   flipPstArrayVertically(endgameWeights.PieceSquareTables[dragontoothmg.Rook]),
+					dragontoothmg.Queen:  flipPstArrayVertically(endgameWeights.PieceSquareTables[dragontoothmg.Queen]),
+					dragontoothmg.King:   flipPstArrayVertically(endgameWeights.PieceSquareTables[dragontoothmg.King]),
+				},
+			},
+		},
 	}
-}
+)

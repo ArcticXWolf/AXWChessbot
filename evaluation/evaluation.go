@@ -9,9 +9,9 @@ import (
 
 type EvaluationPart struct {
 	GamePhase               uint8
-	PieceScore              map[dragontoothmg.Piece]int
-	PieceSquareScoreMidgame map[dragontoothmg.Piece]int
-	PieceSquareScoreEndgame map[dragontoothmg.Piece]int
+	PieceScore              int
+	PieceSquareScoreMidgame int
+	PieceSquareScoreEndgame int
 }
 
 type Evaluation struct {
@@ -35,48 +35,48 @@ func (e *Evaluation) updateTotal() {
 
 		e.TotalScorePerspective = e.TotalScore
 		if !e.Game.Position.Wtomove {
-			e.TotalScorePerspective = -e.TotalScorePerspective
+			e.TotalScorePerspective = -e.TotalScore
 		}
 		return
 	}
 
+	gamePhase := int(e.White.GamePhase + e.Black.GamePhase)
 	e.TotalScore = 0
-	e.TotalScore += sumMapValues(e.White.PieceScore)
-	e.TotalScore -= sumMapValues(e.Black.PieceScore)
+	e.TotalScore += e.White.PieceScore
+	e.TotalScore -= e.Black.PieceScore
+
+	e.TotalScore += (gamePhase*e.White.PieceSquareScoreMidgame + (24-gamePhase)*e.White.PieceSquareScoreEndgame) / 24
+	e.TotalScore -= (gamePhase*e.Black.PieceSquareScoreMidgame + (24-gamePhase)*e.Black.PieceSquareScoreEndgame) / 24
 
 	e.TotalScorePerspective = e.TotalScore
 	if !e.Game.Position.Wtomove {
-		e.TotalScorePerspective = -e.TotalScorePerspective
+		e.TotalScorePerspective = -e.TotalScore
 	}
 }
 
-func CalculateEvaluation(g *game.Game) *Evaluation {
-	is_game_over := g.Result != game.GameNotOver
+func (e *Evaluation) CalculateEvaluation(g *game.Game) int {
+	e.Game = g
+	e.GameOver = e.Game.Result != game.GameNotOver
 
-	whiteEval := EvaluationPart{}
-	blackEval := EvaluationPart{}
+	e.White = EvaluationPart{}
+	e.Black = EvaluationPart{}
 
-	if !is_game_over {
-		whiteEval = calculateEvaluationPart(g, game.White)
-		blackEval = calculateEvaluationPart(g, game.Black)
+	if !e.GameOver {
+		e.White = calculateEvaluationPart(g, game.White)
+		e.Black = calculateEvaluationPart(g, game.Black)
 	}
 
-	eval := &Evaluation{
-		Game:     g,
-		White:    whiteEval,
-		Black:    blackEval,
-		GameOver: is_game_over,
-	}
-	eval.updateTotal()
-	return eval
+	e.updateTotal()
+	return e.TotalScorePerspective
 }
 
 func calculateEvaluationPart(g *game.Game, color game.PlayerColor) EvaluationPart {
+	ps, pstMid, pstEnd := calculateMaterialScore(g, color)
 	evalPart := EvaluationPart{
 		GamePhase:               calculateGamephase(g, color),
-		PieceScore:              calculatePieceScore(g, color),
-		PieceSquareScoreMidgame: make(map[dragontoothmg.Piece]int),
-		PieceSquareScoreEndgame: make(map[dragontoothmg.Piece]int),
+		PieceScore:              ps,
+		PieceSquareScoreMidgame: pstMid,
+		PieceSquareScoreEndgame: pstEnd,
 	}
 	return evalPart
 }
@@ -93,20 +93,24 @@ func calculateGamephase(g *game.Game, color game.PlayerColor) uint8 {
 		4*uint8(bits.OnesCount64(bboards.Queens))
 }
 
-func calculatePieceScore(g *game.Game, color game.PlayerColor) map[dragontoothmg.Piece]int {
-	ps := make(map[dragontoothmg.Piece]int, 6)
+func calculateMaterialScore(g *game.Game, color game.PlayerColor) (int, int, int) {
+	var ps, pstMid, pstEnd, newPs, newPstMid, newPstEnd int
+	var bitboard uint64
+
 	bboards := g.Position.White
 	if color == game.Black {
 		bboards = g.Position.Black
 	}
 
 	for i := 1; i <= 6; i++ {
-		bitboard := getBitboardByPieceType(&bboards, dragontoothmg.Piece(i))
-		count := bits.OnesCount64(bitboard)
-		ps[dragontoothmg.Piece(i)] += count * GetWeights().Midgame.Material[dragontoothmg.Piece(i)]
+		bitboard = getBitboardByPieceType(&bboards, dragontoothmg.Piece(i))
+		newPs, newPstMid, newPstEnd = calculateMaterialScoreForPieceType(g, color, dragontoothmg.Piece(i), bitboard)
+		ps += newPs
+		pstMid += newPstMid
+		pstEnd += newPstEnd
 	}
 
-	return ps
+	return ps, pstMid, pstEnd
 }
 
 func getBitboardByPieceType(bbs *dragontoothmg.Bitboards, pieceType dragontoothmg.Piece) uint64 {
@@ -126,10 +130,15 @@ func getBitboardByPieceType(bbs *dragontoothmg.Bitboards, pieceType dragontoothm
 	}
 }
 
-func sumMapValues(mapToSum map[dragontoothmg.Piece]int) int {
-	result := 0
-	for _, value := range mapToSum {
-		result += value
+func calculateMaterialScoreForPieceType(g *game.Game, color game.PlayerColor, pieceType dragontoothmg.Piece, bitboard uint64) (int, int, int) {
+	var x uint64
+	ps, pstMid, pstEnd := 0, 0, 0
+	for x = bitboard; x != 0; x &= x - 1 {
+		square := bits.TrailingZeros64(x)
+
+		ps += weights[color].Midgame.Material[pieceType]
+		pstMid += weights[color].Midgame.PieceSquareTables[pieceType][square]
+		pstEnd += weights[color].Endgame.PieceSquareTables[pieceType][square]
 	}
-	return result
+	return ps, pstMid, pstEnd
 }

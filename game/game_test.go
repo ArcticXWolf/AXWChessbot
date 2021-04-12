@@ -43,23 +43,23 @@ func TestGameOverDetection(t *testing.T) {
 
 func TestDrawByRepetition(t *testing.T) {
 	game := NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-	game.PushMove("e2e4")
-	game.PushMove("e7e5")
+	game.PushMoveStr("e2e4")
+	game.PushMoveStr("e7e5")
 
-	game.PushMove("f1c4")
-	game.PushMove("f8c5")
-	game.PushMove("c4f1")
-	game.PushMove("c5f8")
+	game.PushMoveStr("f1c4")
+	game.PushMoveStr("f8c5")
+	game.PushMoveStr("c4f1")
+	game.PushMoveStr("c5f8")
 
-	game.PushMove("f1c4")
-	game.PushMove("f8c5")
-	game.PushMove("c4f1")
-	game.PushMove("c5f8")
+	game.PushMoveStr("f1c4")
+	game.PushMoveStr("f8c5")
+	game.PushMoveStr("c4f1")
+	game.PushMoveStr("c5f8")
 
-	game.PushMove("f1c4")
-	game.PushMove("f8c5")
-	game.PushMove("c4f1")
-	game.PushMove("c5f8")
+	game.PushMoveStr("f1c4")
+	game.PushMoveStr("f8c5")
+	game.PushMoveStr("c4f1")
+	game.PushMoveStr("c5f8")
 
 	if game.Result != Draw {
 		t.Errorf("Draw by Repetition, Result = %v, want %v", game.Result, Draw)
@@ -72,7 +72,7 @@ func TestDrawByRepetition(t *testing.T) {
 func TestPushPopMove(t *testing.T) {
 	game := New()
 	unmodified_game := New()
-	game.PushMove("e2e4")
+	game.PushMoveStr("e2e4")
 
 	if reflect.DeepEqual(game, unmodified_game) {
 		t.Errorf("PushMove = %v is wrongfully equal to %v", game, unmodified_game)
@@ -88,7 +88,7 @@ func TestPushPopMove(t *testing.T) {
 func TestPushMoveError(t *testing.T) {
 	game := New()
 
-	err := game.PushMove("e123e1")
+	err := game.PushMoveStr("e123e1")
 
 	if err == nil {
 		t.Errorf("PushMoveError = %v is not an error", err)

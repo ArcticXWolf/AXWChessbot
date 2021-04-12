@@ -3,9 +3,12 @@ package uci
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
+	"go.janniklasrichter.de/axwchessbot/evaluation"
 	"go.janniklasrichter.de/axwchessbot/game"
+	"go.janniklasrichter.de/axwchessbot/search"
 )
 
 type UciOption struct {
@@ -17,16 +20,18 @@ type UciProtocol struct {
 	name        string
 	author      string
 	version     string
+	logger      *log.Logger
 	options     []UciOption
 	currentGame *game.Game
 }
 
-func New(name, author, version string, options []UciOption) *UciProtocol {
+func New(name, author, version string, options []UciOption, logger *log.Logger) *UciProtocol {
 	return &UciProtocol{
 		name:    name,
 		author:  author,
 		version: version,
 		options: options,
+		logger:  logger,
 	}
 }
 
@@ -68,7 +73,7 @@ func (p *UciProtocol) uciCmd(messageParts []string) error {
 }
 
 func (p *UciProtocol) isReadyCmd(messageParts []string) error {
-	fmt.Printf("readyok")
+	fmt.Printf("readyok\n")
 	return nil
 }
 
@@ -111,7 +116,7 @@ func (p *UciProtocol) positionCmd(messageParts []string) error {
 		messageParts = messageParts[1:]
 
 		for _, moveStr := range messageParts {
-			err := p.currentGame.PushMove(moveStr)
+			err := p.currentGame.PushMoveStr(moveStr)
 			if err != nil {
 				return err
 			}
@@ -122,6 +127,16 @@ func (p *UciProtocol) positionCmd(messageParts []string) error {
 }
 
 func (p *UciProtocol) goCmd(messageParts []string) error {
+	evaluator := evaluation.Evaluation{}
+	searchObj := search.New(p.currentGame, p.logger, &evaluator, 2, 4)
+	bestMove, score := searchObj.SearchBestMove()
+
+	fmt.Printf("bestmove %v\n", bestMove.String())
+	fmt.Printf("info depth %d", searchObj.SearchInfo.MaxDepthCompleted)
+	fmt.Printf(" score cp %d", int(score))
+	fmt.Printf(" nodes %d", searchObj.SearchInfo.NodesTraversed)
+	fmt.Printf(" nps %d", int(float64(searchObj.SearchInfo.NodesTraversed)/searchObj.SearchInfo.TotalSearchTime.Seconds()))
+	fmt.Printf(" time %d\n", searchObj.SearchInfo.TotalSearchTime.Milliseconds())
 	return nil
 }
 

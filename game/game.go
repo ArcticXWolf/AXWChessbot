@@ -35,9 +35,15 @@ const (
 	InsufficientMaterial
 )
 
+type UnapplyGameState struct {
+	Result     GameResult
+	DrawReason DrawReason
+}
+
 type Game struct {
 	Moves                []dragontoothmg.Move
 	UnapplyMoveFunctions []func()
+	UnapplyGameStates    []UnapplyGameState
 	HashHistory          []uint64
 	Position             *dragontoothmg.Board
 	Result               GameResult
@@ -49,12 +55,13 @@ func New() *Game {
 	game := &Game{
 		Moves:                []dragontoothmg.Move{},
 		UnapplyMoveFunctions: []func(){},
+		UnapplyGameStates:    []UnapplyGameState{},
 		HashHistory:          []uint64{board.Hash()},
 		Position:             &board,
 		Result:               GameNotOver,
 		DrawReason:           NoDraw,
 	}
-	game.updateGameOverState()
+	game.updateGameState()
 
 	return game
 }
@@ -64,14 +71,19 @@ func NewFromFen(fen string) *Game {
 	game := &Game{
 		Moves:                []dragontoothmg.Move{},
 		UnapplyMoveFunctions: []func(){},
+		UnapplyGameStates:    []UnapplyGameState{},
 		HashHistory:          []uint64{board.Hash()},
 		Position:             &board,
 		Result:               GameNotOver,
 		DrawReason:           NoDraw,
 	}
-	game.updateGameOverState()
+	game.updateGameState()
 
 	return game
+}
+
+func (g *Game) updateGameState() {
+	g.updateGameOverState()
 }
 
 func (g *Game) updateGameOverState() {
@@ -173,19 +185,24 @@ func (g *Game) isDrawnByInsufficientMaterial() bool {
 	return false
 }
 
-func (g *Game) PushMove(moveString string) error {
+func (g *Game) PushMoveStr(moveString string) error {
 	move, err := dragontoothmg.ParseMove(moveString)
 
 	if err != nil {
 		return err
 	}
 
+	return g.PushMove(move)
+}
+
+func (g *Game) PushMove(move dragontoothmg.Move) error {
 	unapply := g.Position.Apply(move)
 	g.Moves = append(g.Moves, move)
 	g.UnapplyMoveFunctions = append(g.UnapplyMoveFunctions, unapply)
+	g.UnapplyGameStates = append(g.UnapplyGameStates, UnapplyGameState{Result: g.Result, DrawReason: g.DrawReason})
 	g.HashHistory = append(g.HashHistory, g.Position.Hash())
 
-	g.updateGameOverState()
+	g.updateGameState()
 
 	return nil
 }
@@ -197,12 +214,15 @@ func (g *Game) PopMove() error {
 
 	// pop move and unapply
 	var unapply func()
+	var unapplyGameState UnapplyGameState
 	g.Moves = g.Moves[:len(g.Moves)-1]
 	unapply, g.UnapplyMoveFunctions = g.UnapplyMoveFunctions[len(g.UnapplyMoveFunctions)-1], g.UnapplyMoveFunctions[:len(g.UnapplyMoveFunctions)-1]
+	unapplyGameState, g.UnapplyGameStates = g.UnapplyGameStates[len(g.UnapplyGameStates)-1], g.UnapplyGameStates[:len(g.UnapplyGameStates)-1]
 	g.HashHistory = g.HashHistory[:len(g.HashHistory)-1]
 	unapply()
 
-	g.updateGameOverState()
+	g.Result = unapplyGameState.Result
+	g.DrawReason = unapplyGameState.DrawReason
 
 	return nil
 }
