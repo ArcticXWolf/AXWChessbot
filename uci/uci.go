@@ -1,10 +1,12 @@
 package uci
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"go.janniklasrichter.de/axwchessbot/evaluation"
 	"go.janniklasrichter.de/axwchessbot/game"
@@ -90,6 +92,7 @@ func (p *UciProtocol) setOptionCmd(messageParts []string) error {
 
 func (p *UciProtocol) positionCmd(messageParts []string) error {
 	command := messageParts[0]
+	p.logger.Printf("Got Position: %v", messageParts)
 	messageParts = messageParts[1:]
 
 	p.currentGame = game.New()
@@ -100,7 +103,7 @@ func (p *UciProtocol) positionCmd(messageParts []string) error {
 			if value == "moves" {
 				break
 			}
-			fen = fen + value
+			fen = fmt.Sprintf("%s %s", fen, value)
 			extracted_keys++
 		}
 		messageParts = messageParts[extracted_keys:]
@@ -127,9 +130,12 @@ func (p *UciProtocol) positionCmd(messageParts []string) error {
 }
 
 func (p *UciProtocol) goCmd(messageParts []string) error {
+	context, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
 	evaluator := evaluation.Evaluation{}
-	searchObj := search.New(p.currentGame, p.logger, &evaluator, 2, 4)
-	bestMove, score := searchObj.SearchBestMove()
+	searchObj := search.New(p.currentGame, p.logger, &evaluator, 40, 4)
+	bestMove, score := searchObj.SearchBestMove(context)
 
 	fmt.Printf("bestmove %v\n", bestMove.String())
 	fmt.Printf("info depth %d", searchObj.SearchInfo.MaxDepthCompleted)

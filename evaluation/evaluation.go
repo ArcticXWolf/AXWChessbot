@@ -26,9 +26,9 @@ type Evaluation struct {
 func (e *Evaluation) updateTotal() {
 	if e.GameOver {
 		if e.Game.Result == game.WhiteWon {
-			e.TotalScore = int(^uint(0) >> 1) // MAX INT
+			e.TotalScore = 1000000
 		} else if e.Game.Result == game.BlackWon {
-			e.TotalScore = -int(^uint(0)>>1) - 1 // MIN INT
+			e.TotalScore = -1000000
 		} else {
 			e.TotalScore = 0 // DRAW
 		}

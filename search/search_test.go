@@ -1,9 +1,14 @@
 package search
 
 import (
+	"context"
+	"log"
+	"os"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/dylhunn/dragontoothmg"
 	"go.janniklasrichter.de/axwchessbot/evaluation"
 	"go.janniklasrichter.de/axwchessbot/evaluation_null"
 	"go.janniklasrichter.de/axwchessbot/evaluation_provider"
@@ -13,11 +18,13 @@ import (
 func benchmarkSearchEvaluation(evaluator evaluation_provider.EvaluationProvider, abdepth uint, b *testing.B) {
 	var nps float64
 	var start time.Time
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	ctx := context.Background()
 
 	for n := 0; n < b.N; n++ {
 		start = time.Now()
-		searchObj := New(game.New(), evaluator, abdepth, 4)
-		searchObj.SearchBestMove()
+		searchObj := New(game.New(), logger, evaluator, abdepth, 4)
+		searchObj.SearchBestMove(ctx)
 		nps += float64(searchObj.SearchInfo.NodesTraversed) / float64(time.Since(start).Seconds())
 	}
 
@@ -55,3 +62,34 @@ func BenchmarkSearchFullEvaluation8(b *testing.B)  { benchmarkSearchFullEvaluati
 func BenchmarkSearchFullEvaluation9(b *testing.B)  { benchmarkSearchFullEvaluation(9, b) }
 func BenchmarkSearchFullEvaluation10(b *testing.B) { benchmarkSearchFullEvaluation(10, b) }
 func BenchmarkSearchFullEvaluation11(b *testing.B) { benchmarkSearchFullEvaluation(11, b) }
+
+func TestSearch_SearchBestMove(t *testing.T) {
+	type fields struct {
+		Game                   *game.Game
+		MaximumDepthAlphaBeta  uint
+		MaximumDepthQuiescence uint
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   dragontoothmg.Move
+		want1  int
+	}{
+		{"Mate in 1 - Black", fields{game.NewFromFen("1r4k1/p4p1p/p4p2/2pn4/K3b3/3q2n1/3r4/b7 b - - 11 38"), 4, 4}, 712, 999999},
+	}
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+	evaluator := evaluation.Evaluation{}
+	ctx := context.Background()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := New(tt.fields.Game, logger, &evaluator, tt.fields.MaximumDepthAlphaBeta, tt.fields.MaximumDepthQuiescence)
+			got, got1 := s.SearchBestMove(ctx)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Search.SearchBestMove() move = %v (%v), want %v (%v)", &got, got, &tt.want, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("Search.SearchBestMove() score = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
