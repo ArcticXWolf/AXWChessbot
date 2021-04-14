@@ -20,10 +20,11 @@ func benchmarkSearchEvaluation(evaluator evaluation_provider.EvaluationProvider,
 	var start time.Time
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	ctx := context.Background()
+	transpositionTable := NewTranspositionTable(1000000)
 
 	for n := 0; n < b.N; n++ {
 		start = time.Now()
-		searchObj := New(game.New(), logger, evaluator, abdepth, 4)
+		searchObj := New(game.New(), logger, transpositionTable, evaluator, abdepth, 4)
 		searchObj.SearchBestMove(ctx)
 		nps += float64(searchObj.SearchInfo.NodesTraversed) / float64(time.Since(start).Seconds())
 	}
@@ -79,10 +80,11 @@ func TestSearch_SearchBestMove(t *testing.T) {
 	}
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	evaluator := evaluation.Evaluation{}
+	transpositionTable := NewTranspositionTable(1000000)
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := New(tt.fields.Game, logger, &evaluator, tt.fields.MaximumDepthAlphaBeta, tt.fields.MaximumDepthQuiescence)
+			s := New(tt.fields.Game, logger, transpositionTable, &evaluator, tt.fields.MaximumDepthAlphaBeta, tt.fields.MaximumDepthQuiescence)
 			got, got1 := s.SearchBestMove(ctx)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Search.SearchBestMove() move = %v (%v), want %v (%v)", &got, got, &tt.want, tt.want)

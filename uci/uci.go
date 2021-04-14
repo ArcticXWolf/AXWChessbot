@@ -133,8 +133,9 @@ func (p *UciProtocol) goCmd(messageParts []string) error {
 	context, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
+	tTable := search.NewTranspositionTable(1000000)
 	evaluator := evaluation.Evaluation{}
-	searchObj := search.New(p.currentGame, p.logger, &evaluator, 40, 4)
+	searchObj := search.New(p.currentGame, p.logger, tTable, &evaluator, 40, 4)
 	bestMove, score := searchObj.SearchBestMove(context)
 
 	fmt.Printf("bestmove %v\n", bestMove.String())

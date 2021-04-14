@@ -142,3 +142,7 @@ func calculateMaterialScoreForPieceType(g *game.Game, color game.PlayerColor, pi
 	}
 	return ps, pstMid, pstEnd
 }
+
+func (e *Evaluation) GetPieceTypeValue(pieceType dragontoothmg.Piece) int {
+	return weights[game.White].Midgame.Material[pieceType]
+}
