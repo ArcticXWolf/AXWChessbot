@@ -241,7 +241,7 @@ func (s *Search) getMovesInOrder(depthLeft int, previousMoves []dragontoothmg.Mo
 
 func (s *Search) getCapturesInOrder() []dragontoothmg.Move {
 	legalMoves := s.Game.Position.GenerateLegalMoves()
-	var captures []dragontoothmg.Move = make([]dragontoothmg.Move, len(legalMoves))
+	var captures []dragontoothmg.Move = make([]dragontoothmg.Move, 0, len(legalMoves))
 
 	bitboards := s.Game.Position.White
 	if !s.Game.Position.Wtomove {
