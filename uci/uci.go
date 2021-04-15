@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"go.janniklasrichter.de/axwchessbot/evaluation"
 	"go.janniklasrichter.de/axwchessbot/game"
@@ -130,12 +129,13 @@ func (p *UciProtocol) positionCmd(messageParts []string) error {
 }
 
 func (p *UciProtocol) goCmd(messageParts []string) error {
-	context, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	timingInfo := NewTimingInfo(messageParts)
+	context, cancel := timingInfo.calculateTimeoutContext(context.Background(), p.currentGame)
 	defer cancel()
 
 	tTable := search.NewTranspositionTable(1000000)
 	evaluator := evaluation.Evaluation{}
-	searchObj := search.New(p.currentGame, p.logger, tTable, &evaluator, 40, 4)
+	searchObj := search.New(p.currentGame, p.logger, tTable, &evaluator, 40, 10)
 	bestMove, score := searchObj.SearchBestMove(context)
 
 	fmt.Printf("bestmove %v\n", bestMove.String())
