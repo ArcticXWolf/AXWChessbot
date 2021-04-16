@@ -14,9 +14,9 @@ const (
 )
 
 var (
-	engineVersion = "undefined"
-	buildDate     = "undefined"
-	gitCommit     = "undefined"
+	version = "undefined"
+	date    = "undefined"
+	commit  = "undefined"
 )
 
 func main() {
@@ -29,7 +29,7 @@ func main() {
 	pprof.StartCPUProfile(f)
 	defer pprof.StopCPUProfile()
 
-	logger.Println(engineName, "Version", engineVersion, "BuildDate", buildDate, "GitCommitHash", gitCommit)
+	logger.Println(engineName, "Version", version, "BuildDate", date, "GitCommitHash", commit)
 
-	uci.StartProtocol(logger, uci.New(engineName, engineAuthor, engineVersion, []uci.UciOption{}, logger))
+	uci.StartProtocol(logger, uci.New(engineName, engineAuthor, version, []uci.UciOption{}, logger))
 }
