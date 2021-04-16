@@ -29,10 +29,14 @@ implemented.
 
 * Written in golang
 * Basic UCI interface
+* Simple timemanagement
 * Simple evaluation function using
     * Gamephase detection of mid- and endgame
     * Piece value
     * Piece square tables
+    * Tempo evaluation
+    * Pair bonus
+    * Rook on (half-)open files bonus
 * Simple search algorithm using
     * Negamax with alpha-beta-pruning
     * Quiescence search
@@ -43,13 +47,9 @@ implemented.
 ## Features ideas
 
 * Evaluation improvements
-    * Tempo evaluation
-    * Pair bonus
-    * Rook on (half-)open files bonus
     * Pawnshield bonus
     * Blocked piece penalty
     * Passed pawn bonus
-* Simple timemanagement
 * Search improvements
     * Killer move heuristics
     * Multiprocessing (Lazy SMP?)

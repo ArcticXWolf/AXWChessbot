@@ -25,7 +25,7 @@ func benchmarkSearchEvaluation(evaluator evaluation_provider.EvaluationProvider,
 
 	for n := 0; n < b.N; n++ {
 		start = time.Now()
-		searchObj := New(game.New(), logger, transpositionTable, evaluator, abdepth, 4)
+		searchObj := New(game.New(), logger, transpositionTable, evaluator, abdepth, 1)
 		searchObj.SearchBestMove(ctx)
 		nps += float64(searchObj.SearchInfo.NodesTraversed) / float64(time.Since(start).Seconds())
 	}
@@ -134,6 +134,37 @@ func TestProblematicGames(t *testing.T) {
 
 			s := New(game, logger, transpositionTable, &evaluator, tt.fields.MaximumDepthAlphaBeta, tt.fields.MaximumDepthQuiescence)
 			s.SearchBestMove(ctx)
+		})
+	}
+}
+
+func TestSearch_getCapturesInOrder(t *testing.T) {
+	type fields struct {
+		Game *game.Game
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []dragontoothmg.Move
+	}{
+		{"No Captures in Starting Position", fields{game.New()}, []dragontoothmg.Move{}},
+		{"One Capture in Scandinavian Defense", fields{game.NewFromFen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")}, []dragontoothmg.Move{1827}},
+		{"Multiple Captures on Enemy Queen", fields{game.NewFromFen("rn2kb1r/ppp1pppp/8/2bpq2n/3P4/5NQ1/PPP1PPPP/RNB1KB1R w KQkq - 0 1")}, []dragontoothmg.Move{1764, 1380, 1444, 1762, 1462}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger := log.New(os.Stdout, "", log.LstdFlags)
+			evaluator := evaluation.Evaluation{}
+			transpositionTable := NewTranspositionTable(1000000)
+			s := &Search{
+				Game:               tt.fields.Game,
+				logger:             logger,
+				evaluationProvider: &evaluator,
+				transpositionTable: transpositionTable,
+			}
+			if got := s.getCapturesInOrder(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Search.getCapturesInOrder() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

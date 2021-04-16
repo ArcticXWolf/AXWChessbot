@@ -205,7 +205,7 @@ func TestCalculateEvaluation(t *testing.T) {
 		{
 			"GameStart",
 			game_gamestart,
-			0,
+			10,
 		},
 	}
 	for _, tt := range tests {

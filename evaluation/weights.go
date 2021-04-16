@@ -5,17 +5,41 @@ import (
 	"go.janniklasrichter.de/axwchessbot/game"
 )
 
+type AdditionalModifier struct {
+	BishopPairModifier        int
+	KnightPairModifier        int
+	RookPairModifier          int
+	OpenRookModifier          int
+	HalfRookModifier          int
+	TempoModifier             int
+	KingShieldRank2Modifier   int
+	KingShieldRank3Modifier   int
+	RookBlockedByKingModifier int
+}
+
 type GamephaseWeights struct {
 	Material          map[dragontoothmg.Piece]int
 	PieceSquareTables map[dragontoothmg.Piece][64]int
 }
 
 type Weights struct {
-	Midgame GamephaseWeights
-	Endgame GamephaseWeights
+	Midgame            GamephaseWeights
+	Endgame            GamephaseWeights
+	AdditionalModifier AdditionalModifier
 }
 
 var (
+	additionalModifiers = AdditionalModifier{
+		BishopPairModifier:        30,
+		KnightPairModifier:        -8,
+		RookPairModifier:          -16,
+		OpenRookModifier:          10,
+		HalfRookModifier:          5,
+		TempoModifier:             10,
+		KingShieldRank2Modifier:   10,
+		KingShieldRank3Modifier:   5,
+		RookBlockedByKingModifier: 24,
+	}
 	weightsForAllPhases = GamephaseWeights{
 		Material: map[dragontoothmg.Piece]int{
 			dragontoothmg.Pawn:   100,
@@ -130,8 +154,9 @@ func flipPstArrayVertically(pst [64]int) [64]int {
 var (
 	weights = map[game.PlayerColor]Weights{
 		game.White: Weights{
-			Midgame: midgameWeights,
-			Endgame: endgameWeights,
+			Midgame:            midgameWeights,
+			Endgame:            endgameWeights,
+			AdditionalModifier: additionalModifiers,
 		},
 		game.Black: Weights{
 			Midgame: GamephaseWeights{
@@ -156,6 +181,7 @@ var (
 					dragontoothmg.King:   flipPstArrayVertically(endgameWeights.PieceSquareTables[dragontoothmg.King]),
 				},
 			},
+			AdditionalModifier: additionalModifiers,
 		},
 	}
 )

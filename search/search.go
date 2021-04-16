@@ -96,7 +96,10 @@ func (s *Search) alphaBeta(ctx context.Context, depthLeft, alpha, beta int, move
 	var cancelled bool = false
 
 	if depthLeft <= 0 || s.Game.Result != game.GameNotOver {
-		score := s.quiescenceSearch(alpha, beta, int(s.MaximumDepthQuiescence)-1)
+		// add leaf to nodecount, but do not count it in qnodecount (prevent overlap in both counts)
+		s.SearchInfo.NodesTraversed++
+		s.SearchInfo.QNodesTraversed--
+		score := s.quiescenceSearch(alpha, beta, int(s.MaximumDepthQuiescence))
 		if s.Game.Result == game.BlackWon || s.Game.Result == game.WhiteWon {
 			if score > 0 {
 				score -= int(s.MaximumDepthAlphaBeta) - depthLeft // game won, minimize path to victory
@@ -189,7 +192,6 @@ moveIterator:
 }
 
 func (s *Search) quiescenceSearch(alpha, beta, depthLeft int) int {
-	s.SearchInfo.NodesTraversed++
 	s.SearchInfo.QNodesTraversed++
 
 	standPat := s.evaluationProvider.CalculateEvaluation(s.Game)
@@ -200,7 +202,7 @@ func (s *Search) quiescenceSearch(alpha, beta, depthLeft int) int {
 		alpha = standPat
 	}
 
-	if depthLeft <= 0 || s.Game.Result != game.GameNotOver {
+	if depthLeft > 0 && s.Game.Result == game.GameNotOver {
 		for _, move := range s.getCapturesInOrder() {
 			s.Game.PushMove(move)
 			score := -s.quiescenceSearch(-beta, -alpha, depthLeft-1)
@@ -243,29 +245,31 @@ func (s *Search) getCapturesInOrder() []dragontoothmg.Move {
 	legalMoves := s.Game.Position.GenerateLegalMoves()
 	var captures []dragontoothmg.Move = make([]dragontoothmg.Move, 0, len(legalMoves))
 
-	bitboards := s.Game.Position.White
+	bitboardsOwn := s.Game.Position.White
+	bitboardsOpponent := s.Game.Position.Black
 	if !s.Game.Position.Wtomove {
-		bitboards = s.Game.Position.Black
+		bitboardsOwn = s.Game.Position.Black
+		bitboardsOpponent = s.Game.Position.White
 	}
 
 	for _, move := range legalMoves {
-		if bitboards.All&(1<<move.To()) > 0 {
+		if bitboardsOpponent.All&(1<<move.To()) > 0 {
 			captures = append(captures, move)
 		}
 	}
 
 	sort.Slice(captures, func(i, j int) bool {
-		return s.getCaptureMVVLVA(captures[i], bitboards) < s.getCaptureMVVLVA(captures[j], bitboards)
+		return s.getCaptureMVVLVA(captures[i], bitboardsOwn, bitboardsOpponent) < s.getCaptureMVVLVA(captures[j], bitboardsOwn, bitboardsOpponent)
 	})
 
 	return captures
 }
 
-func (s *Search) getCaptureMVVLVA(move dragontoothmg.Move, bitboards dragontoothmg.Bitboards) (score int) {
-	pieceTypeFrom, _ := s.getPieceTypeAtPosition(move.From(), bitboards)
-	pieceTypeTo, _ := s.getPieceTypeAtPosition(move.To(), bitboards)
+func (s *Search) getCaptureMVVLVA(move dragontoothmg.Move, bitboardsOwn dragontoothmg.Bitboards, bitboardsOpponent dragontoothmg.Bitboards) (score int) {
+	pieceTypeFrom, _ := s.getPieceTypeAtPosition(move.From(), bitboardsOwn)
+	pieceTypeTo, _ := s.getPieceTypeAtPosition(move.To(), bitboardsOpponent)
 
-	return s.evaluationProvider.GetPieceTypeValue(pieceTypeTo) + (10 - int(pieceTypeFrom))
+	return (1200 - s.evaluationProvider.GetPieceTypeValue(pieceTypeTo)) + int(pieceTypeFrom)
 }
 
 func (s *Search) getPieceTypeAtPosition(position uint8, bitboards dragontoothmg.Bitboards) (pieceType dragontoothmg.Piece, occupied bool) {

@@ -91,7 +91,7 @@ func (p *UciProtocol) setOptionCmd(messageParts []string) error {
 
 func (p *UciProtocol) positionCmd(messageParts []string) error {
 	command := messageParts[0]
-	p.logger.Printf("Got Position: %v", messageParts)
+	p.logger.Printf("Position: %v", messageParts)
 	messageParts = messageParts[1:]
 
 	p.currentGame = game.New()
@@ -139,11 +139,14 @@ func (p *UciProtocol) goCmd(messageParts []string) error {
 	bestMove, score := searchObj.SearchBestMove(context)
 
 	fmt.Printf("bestmove %v\n", bestMove.String())
-	fmt.Printf("info depth %d", searchObj.SearchInfo.MaxDepthCompleted)
-	fmt.Printf(" score cp %d", int(score))
-	fmt.Printf(" nodes %d", searchObj.SearchInfo.NodesTraversed)
-	fmt.Printf(" nps %d", int(float64(searchObj.SearchInfo.NodesTraversed)/searchObj.SearchInfo.TotalSearchTime.Seconds()))
-	fmt.Printf(" time %d\n", searchObj.SearchInfo.TotalSearchTime.Milliseconds())
+	infoStr := fmt.Sprintf("info depth %d", searchObj.SearchInfo.MaxDepthCompleted)
+	infoStr += fmt.Sprintf(" score cp %d", int(score))
+	infoStr += fmt.Sprintf(" nodes %d", searchObj.SearchInfo.NodesTraversed)
+	infoStr += fmt.Sprintf(" nps %d", int(float64(searchObj.SearchInfo.NodesTraversed)/searchObj.SearchInfo.TotalSearchTime.Seconds()))
+	infoStr += fmt.Sprintf(" time %d\n", searchObj.SearchInfo.TotalSearchTime.Milliseconds())
+	fmt.Print(infoStr)
+	p.logger.Printf("Move: %v, Info: %v", bestMove.String(), infoStr)
+
 	return nil
 }
 

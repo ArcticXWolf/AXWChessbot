@@ -12,6 +12,12 @@ type EvaluationPart struct {
 	PieceScore              int
 	PieceSquareScoreMidgame int
 	PieceSquareScoreEndgame int
+	PairModifier            int
+	TempoModifier           int
+	RookFileModifier        int
+	BlockedPiecesModifier   int
+	KingShieldModifier      int
+	PassedPawnModifier      int
 }
 
 type Evaluation struct {
@@ -21,6 +27,26 @@ type Evaluation struct {
 	GameOver              bool
 	TotalScore            int
 	TotalScorePerspective int
+}
+
+func (e *Evaluation) CalculateEvaluation(g *game.Game) int {
+	e.Game = g
+	e.GameOver = e.Game.Result != game.GameNotOver
+
+	e.White = EvaluationPart{}
+	e.Black = EvaluationPart{}
+
+	if !e.GameOver {
+		e.White = calculateEvaluationPart(g, game.White)
+		e.Black = calculateEvaluationPart(g, game.Black)
+	}
+
+	e.updateTotal()
+	return e.TotalScorePerspective
+}
+
+func (e *Evaluation) GetPieceTypeValue(pieceType dragontoothmg.Piece) int {
+	return weights[game.White].Midgame.Material[pieceType]
 }
 
 func (e *Evaluation) updateTotal() {
@@ -48,26 +74,23 @@ func (e *Evaluation) updateTotal() {
 	e.TotalScore += (gamePhase*e.White.PieceSquareScoreMidgame + (24-gamePhase)*e.White.PieceSquareScoreEndgame) / 24
 	e.TotalScore -= (gamePhase*e.Black.PieceSquareScoreMidgame + (24-gamePhase)*e.Black.PieceSquareScoreEndgame) / 24
 
+	e.TotalScore += e.White.PairModifier
+	e.TotalScore -= e.Black.PairModifier
+	e.TotalScore += e.White.TempoModifier
+	e.TotalScore -= e.Black.TempoModifier
+	e.TotalScore += e.White.RookFileModifier
+	e.TotalScore -= e.Black.RookFileModifier
+	e.TotalScore += e.White.BlockedPiecesModifier
+	e.TotalScore -= e.Black.BlockedPiecesModifier
+	e.TotalScore += e.White.KingShieldModifier
+	e.TotalScore -= e.Black.KingShieldModifier
+	e.TotalScore += e.White.PassedPawnModifier
+	e.TotalScore -= e.Black.PassedPawnModifier
+
 	e.TotalScorePerspective = e.TotalScore
 	if !e.Game.Position.Wtomove {
 		e.TotalScorePerspective = -e.TotalScore
 	}
-}
-
-func (e *Evaluation) CalculateEvaluation(g *game.Game) int {
-	e.Game = g
-	e.GameOver = e.Game.Result != game.GameNotOver
-
-	e.White = EvaluationPart{}
-	e.Black = EvaluationPart{}
-
-	if !e.GameOver {
-		e.White = calculateEvaluationPart(g, game.White)
-		e.Black = calculateEvaluationPart(g, game.Black)
-	}
-
-	e.updateTotal()
-	return e.TotalScorePerspective
 }
 
 func calculateEvaluationPart(g *game.Game, color game.PlayerColor) EvaluationPart {
@@ -77,6 +100,9 @@ func calculateEvaluationPart(g *game.Game, color game.PlayerColor) EvaluationPar
 		PieceScore:              ps,
 		PieceSquareScoreMidgame: pstMid,
 		PieceSquareScoreEndgame: pstEnd,
+		PairModifier:            calculatePairModifier(g, color),
+		TempoModifier:           calculateTempoModifier(g, color),
+		RookFileModifier:        calculateRookModifier(g, color),
 	}
 	return evalPart
 }
@@ -143,6 +169,61 @@ func calculateMaterialScoreForPieceType(g *game.Game, color game.PlayerColor, pi
 	return ps, pstMid, pstEnd
 }
 
-func (e *Evaluation) GetPieceTypeValue(pieceType dragontoothmg.Piece) int {
-	return weights[game.White].Midgame.Material[pieceType]
+func calculatePairModifier(g *game.Game, color game.PlayerColor) (result int) {
+	bboards := g.Position.White
+	if color == game.Black {
+		bboards = g.Position.Black
+	}
+
+	if bits.OnesCount64(bboards.Bishops) >= 2 {
+		result += weights[color].AdditionalModifier.BishopPairModifier
+	}
+	if bits.OnesCount64(bboards.Knights) >= 2 {
+		result += weights[color].AdditionalModifier.KnightPairModifier
+	}
+	if bits.OnesCount64(bboards.Rooks) >= 2 {
+		result += weights[color].AdditionalModifier.RookPairModifier
+	}
+
+	return
+}
+
+func calculateTempoModifier(g *game.Game, color game.PlayerColor) (result int) {
+	if g.Position.Wtomove == bool(color) {
+		result += weights[color].AdditionalModifier.TempoModifier
+	}
+	return
+}
+
+func calculateRookModifier(g *game.Game, color game.PlayerColor) (result int) {
+	bboardsOwn := g.Position.White
+	bboardsOther := g.Position.Black
+	if color == game.Black {
+		bboardsOwn = g.Position.Black
+		bboardsOther = g.Position.White
+	}
+
+	pawnFillOwn := calculatePawnFileFill(bboardsOwn.Pawns)
+	pawnFillOther := calculatePawnFileFill(bboardsOther.Pawns)
+
+	openFiles := ^pawnFillOwn & ^pawnFillOther
+	halfOpenFiles := ^pawnFillOwn ^ openFiles
+
+	rooksOnOpenFiles := bits.OnesCount64(bboardsOwn.Rooks & openFiles)
+	rooksOnHalfOpenFiles := bits.OnesCount64(bboardsOwn.Rooks & halfOpenFiles)
+
+	return rooksOnOpenFiles*weights[color].AdditionalModifier.OpenRookModifier + rooksOnHalfOpenFiles*weights[color].AdditionalModifier.HalfRookModifier
+}
+
+func calculatePawnFileFill(pawnBitboard uint64) uint64 {
+	// Northfill
+	pawnBitboard |= (pawnBitboard << 8)
+	pawnBitboard |= (pawnBitboard << 16)
+	pawnBitboard |= (pawnBitboard << 32)
+	// Southfill
+	pawnBitboard |= (pawnBitboard >> 8)
+	pawnBitboard |= (pawnBitboard >> 16)
+	pawnBitboard |= (pawnBitboard >> 32)
+
+	return pawnBitboard
 }
