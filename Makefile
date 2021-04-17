@@ -3,7 +3,7 @@ BUILD=`date +%FT%T%z`
 COMMIT=`git rev-list -1 HEAD`
 BINARY=axwchessbot
 
-LDFLAGS=-ldflags "-w -s -X main.engineVersion=${VERSION} -X main.buildDate=${BUILD} -X main.gitCommit=${COMMIT}"
+LDFLAGS=-ldflags "-w -s -X main.version=${VERSION} -X main.date=${BUILD} -X main.commit=${COMMIT}"
 
 build:
 	echo "Building for linux and windows"

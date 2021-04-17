@@ -18,8 +18,9 @@ type AdditionalModifier struct {
 }
 
 type GamephaseWeights struct {
-	Material          map[dragontoothmg.Piece]int
-	PieceSquareTables map[dragontoothmg.Piece][64]int
+	Material           map[dragontoothmg.Piece]int
+	PassedPawnModifier [64]int
+	PieceSquareTables  map[dragontoothmg.Piece][64]int
 }
 
 type Weights struct {
@@ -48,6 +49,16 @@ var (
 			dragontoothmg.Rook:   500,
 			dragontoothmg.Queen:  900,
 			dragontoothmg.King:   0,
+		},
+		PassedPawnModifier: [64]int{
+			0, 0, 0, 0, 0, 0, 0, 0,
+			10, 10, 10, 10, 10, 10, 10, 10,
+			20, 20, 20, 20, 20, 20, 20, 20,
+			40, 40, 40, 40, 40, 40, 40, 40,
+			60, 60, 60, 60, 60, 60, 60, 60,
+			80, 80, 80, 80, 80, 80, 80, 80,
+			100, 100, 100, 100, 100, 100, 100, 100,
+			0, 0, 0, 0, 0, 0, 0, 0,
 		},
 		PieceSquareTables: map[dragontoothmg.Piece][64]int{
 			dragontoothmg.Pawn: [64]int{
@@ -116,11 +127,13 @@ var (
 
 var (
 	midgameWeights = GamephaseWeights{
-		Material:          weightsForAllPhases.Material,
-		PieceSquareTables: weightsForAllPhases.PieceSquareTables,
+		Material:           weightsForAllPhases.Material,
+		PassedPawnModifier: weightsForAllPhases.PassedPawnModifier,
+		PieceSquareTables:  weightsForAllPhases.PieceSquareTables,
 	}
 	endgameWeights = GamephaseWeights{
-		Material: weightsForAllPhases.Material,
+		Material:           weightsForAllPhases.Material,
+		PassedPawnModifier: weightsForAllPhases.PassedPawnModifier,
 		PieceSquareTables: map[dragontoothmg.Piece][64]int{
 			dragontoothmg.Pawn:   weightsForAllPhases.PieceSquareTables[dragontoothmg.Pawn],
 			dragontoothmg.Knight: weightsForAllPhases.PieceSquareTables[dragontoothmg.Knight],
@@ -160,7 +173,8 @@ var (
 		},
 		game.Black: Weights{
 			Midgame: GamephaseWeights{
-				Material: midgameWeights.Material,
+				Material:           midgameWeights.Material,
+				PassedPawnModifier: flipPstArrayVertically(midgameWeights.PassedPawnModifier),
 				PieceSquareTables: map[dragontoothmg.Piece][64]int{
 					dragontoothmg.Pawn:   flipPstArrayVertically(midgameWeights.PieceSquareTables[dragontoothmg.Pawn]),
 					dragontoothmg.Knight: flipPstArrayVertically(midgameWeights.PieceSquareTables[dragontoothmg.Knight]),
@@ -171,7 +185,8 @@ var (
 				},
 			},
 			Endgame: GamephaseWeights{
-				Material: endgameWeights.Material,
+				Material:           endgameWeights.Material,
+				PassedPawnModifier: flipPstArrayVertically(endgameWeights.PassedPawnModifier),
 				PieceSquareTables: map[dragontoothmg.Piece][64]int{
 					dragontoothmg.Pawn:   flipPstArrayVertically(endgameWeights.PieceSquareTables[dragontoothmg.Pawn]),
 					dragontoothmg.Knight: flipPstArrayVertically(endgameWeights.PieceSquareTables[dragontoothmg.Knight]),

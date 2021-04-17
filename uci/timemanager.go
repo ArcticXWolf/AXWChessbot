@@ -48,7 +48,7 @@ func NewTimingInfo(messageParts []string) (timingInfo *UciTimingInfo) {
 	return
 }
 
-func (timingInfo *UciTimingInfo) calculateTimeoutContext(ctx context.Context, g *game.Game) (context.Context, func()) {
+func (timingInfo *UciTimingInfo) calculateTimeoutContext(ctx context.Context, g *game.Game, options []UciOption) (context.Context, func()) {
 	if timingInfo.MovesToGo <= 0 && timingInfo.TimeWhite <= 0 && timingInfo.TimeBlack <= 0 {
 		return context.WithCancel(ctx)
 	}
@@ -62,7 +62,24 @@ func (timingInfo *UciTimingInfo) calculateTimeoutContext(ctx context.Context, g 
 		timeLeft, increment = time.Duration(timingInfo.TimeBlack)*time.Millisecond, time.Duration(timingInfo.IncrementBlack)*time.Millisecond
 	}
 
-	timeLeft -= MoveOverhead
+	moveOverhead := MoveOverhead
+	maxTime := MaxTime
+	for _, option := range options {
+		if option.name == "Move Overhead" {
+			optionsMO, err := strconv.Atoi(option.value)
+			if err == nil {
+				moveOverhead = time.Duration(optionsMO) * time.Millisecond
+			}
+		}
+		if option.name == "Max Time" {
+			optionsMT, err := strconv.Atoi(option.value)
+			if err == nil {
+				maxTime = time.Duration(optionsMT) * time.Second
+			}
+		}
+	}
+
+	timeLeft -= moveOverhead
 	if timeLeft <= 0 {
 		timeLeft = 0
 	}
@@ -73,8 +90,8 @@ func (timingInfo *UciTimingInfo) calculateTimeoutContext(ctx context.Context, g 
 	if limit > timeLeft-MinTimeLeft {
 		limit = timeLeft - MinTimeLeft
 	}
-	if limit > MaxTime {
-		limit = MaxTime
+	if limit > maxTime {
+		limit = maxTime
 	}
 
 	return context.WithDeadline(ctx, timingInfo.StartTimestamp.Add(limit))

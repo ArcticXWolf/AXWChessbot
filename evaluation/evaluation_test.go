@@ -217,3 +217,91 @@ func TestCalculateEvaluation(t *testing.T) {
 		})
 	}
 }
+
+func Test_calculatePairModifier(t *testing.T) {
+	type args struct {
+		g     *game.Game
+		color game.PlayerColor
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{"GameStart White", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.White}, 6},
+		{"GameStart Black", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.Black}, 6},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculatePairModifier(tt.args.g, tt.args.color); got != tt.want {
+				t.Errorf("calculatePairModifier() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_calculateTempoModifier(t *testing.T) {
+	type args struct {
+		g     *game.Game
+		color game.PlayerColor
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{"GameStart White", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.White}, 10},
+		{"GameStart Black", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.Black}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculateTempoModifier(tt.args.g, tt.args.color); got != tt.want {
+				t.Errorf("calculateTempoModifier() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_calculateRookModifier(t *testing.T) {
+	type args struct {
+		g     *game.Game
+		color game.PlayerColor
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{"GameStart White", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.White}, 0},
+		{"GameStart Black", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.Black}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculateRookModifier(tt.args.g, tt.args.color); got != tt.want {
+				t.Errorf("calculateRookModifier() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_calculatePassedPawns(t *testing.T) {
+	type args struct {
+		g     *game.Game
+		color game.PlayerColor
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{"GameStart White", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.White}, 0},
+		{"GameStart Black", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.Black}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculatePassedPawns(tt.args.g, tt.args.color); got != tt.want {
+				t.Errorf("calculatePassedPawns() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

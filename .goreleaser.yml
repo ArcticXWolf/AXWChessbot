@@ -14,9 +14,8 @@ archives:
       linux: linux
       windows: windows
       386: i386
-      amd64: x86_64
     format: binary
-    name_template: "{{ tolower .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ tolower .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 checksum:
   name_template: 'checksums.txt'
 snapshot:

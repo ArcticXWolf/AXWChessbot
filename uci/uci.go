@@ -5,11 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"go.janniklasrichter.de/axwchessbot/evaluation"
 	"go.janniklasrichter.de/axwchessbot/game"
 	"go.janniklasrichter.de/axwchessbot/search"
+)
+
+const (
+	TranspositionTableSize = 268435456
 )
 
 type UciOption struct {
@@ -18,21 +23,23 @@ type UciOption struct {
 }
 
 type UciProtocol struct {
-	name        string
-	author      string
-	version     string
-	logger      *log.Logger
-	options     []UciOption
-	currentGame *game.Game
+	name               string
+	author             string
+	version            string
+	logger             *log.Logger
+	options            []UciOption
+	transpositionTable *search.TranspositionTable
+	currentGame        *game.Game
 }
 
 func New(name, author, version string, options []UciOption, logger *log.Logger) *UciProtocol {
 	return &UciProtocol{
-		name:    name,
-		author:  author,
-		version: version,
-		options: options,
-		logger:  logger,
+		name:               name,
+		author:             author,
+		version:            version,
+		options:            options,
+		transpositionTable: search.NewTranspositionTable(TranspositionTableSize),
+		logger:             logger,
 	}
 }
 
@@ -66,9 +73,6 @@ func (p *UciProtocol) HandleInput(message string) error {
 func (p *UciProtocol) uciCmd(messageParts []string) error {
 	fmt.Printf("id name %s %s\n", p.name, p.version)
 	fmt.Printf("id author %s\n", p.author)
-	for _, option := range p.options {
-		fmt.Printf("option name %v type string default", option.name)
-	}
 	fmt.Println("uciok")
 	return nil
 }
@@ -83,9 +87,34 @@ func (p *UciProtocol) setOptionCmd(messageParts []string) error {
 		return errors.New("wrong arguments for setoption command")
 	}
 
-	option := UciOption{messageParts[1], messageParts[3]}
+	option := UciOption{}
+	nameTokenFound := false
+	valueTokenFound := false
+	for _, content := range messageParts {
+		if !nameTokenFound {
+			if content == "name" {
+				nameTokenFound = true
+			}
+			continue
+		}
+
+		if !valueTokenFound {
+			if content == "value" {
+				valueTokenFound = true
+			} else {
+				option.name = fmt.Sprintf("%v %v", option.name, strings.TrimSpace(content))
+			}
+			continue
+		}
+
+		option.value = fmt.Sprintf("%v %v", option.value, strings.TrimSpace(content))
+	}
+
+	option.name = strings.TrimSpace(option.name)
+	option.value = strings.TrimSpace(option.value)
 	p.options = append(p.options, option)
 
+	p.recreateTranspositionTable()
 	return nil
 }
 
@@ -130,12 +159,11 @@ func (p *UciProtocol) positionCmd(messageParts []string) error {
 
 func (p *UciProtocol) goCmd(messageParts []string) error {
 	timingInfo := NewTimingInfo(messageParts)
-	context, cancel := timingInfo.calculateTimeoutContext(context.Background(), p.currentGame)
+	context, cancel := timingInfo.calculateTimeoutContext(context.Background(), p.currentGame, p.options)
 	defer cancel()
 
-	tTable := search.NewTranspositionTable(1000000)
 	evaluator := evaluation.Evaluation{}
-	searchObj := search.New(p.currentGame, p.logger, tTable, &evaluator, 40, 10)
+	searchObj := search.New(p.currentGame, p.logger, p.transpositionTable, &evaluator, 40, 10)
 	bestMove, score := searchObj.SearchBestMove(context)
 
 	fmt.Printf("bestmove %v\n", bestMove.String())
@@ -151,5 +179,20 @@ func (p *UciProtocol) goCmd(messageParts []string) error {
 }
 
 func (p *UciProtocol) uciNewGameCmd(messageParts []string) error {
+	p.recreateTranspositionTable()
 	return nil
+}
+
+func (p *UciProtocol) recreateTranspositionTable() {
+	transpositionTableSize := TranspositionTableSize
+	for _, option := range p.options {
+		if option.name == "Hash" {
+			optionsTTSize, err := strconv.Atoi(option.value)
+			if err == nil {
+				transpositionTableSize = optionsTTSize * 1048576
+			}
+		}
+	}
+
+	p.transpositionTable = search.NewTranspositionTable(transpositionTableSize)
 }

@@ -37,6 +37,7 @@ implemented.
     * Tempo evaluation
     * Pair bonus
     * Rook on (half-)open files bonus
+    * Passed pawn bonus
 * Simple search algorithm using
     * Negamax with alpha-beta-pruning
     * Quiescence search
@@ -49,7 +50,6 @@ implemented.
 * Evaluation improvements
     * Pawnshield bonus
     * Blocked piece penalty
-    * Passed pawn bonus
 * Search improvements
     * Killer move heuristics
     * Multiprocessing (Lazy SMP?)

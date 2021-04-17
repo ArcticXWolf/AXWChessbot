@@ -103,6 +103,7 @@ func calculateEvaluationPart(g *game.Game, color game.PlayerColor) EvaluationPar
 		PairModifier:            calculatePairModifier(g, color),
 		TempoModifier:           calculateTempoModifier(g, color),
 		RookFileModifier:        calculateRookModifier(g, color),
+		PassedPawnModifier:      calculatePassedPawns(g, color),
 	}
 	return evalPart
 }
@@ -215,15 +216,29 @@ func calculateRookModifier(g *game.Game, color game.PlayerColor) (result int) {
 	return rooksOnOpenFiles*weights[color].AdditionalModifier.OpenRookModifier + rooksOnHalfOpenFiles*weights[color].AdditionalModifier.HalfRookModifier
 }
 
-func calculatePawnFileFill(pawnBitboard uint64) uint64 {
-	// Northfill
-	pawnBitboard |= (pawnBitboard << 8)
-	pawnBitboard |= (pawnBitboard << 16)
-	pawnBitboard |= (pawnBitboard << 32)
-	// Southfill
-	pawnBitboard |= (pawnBitboard >> 8)
-	pawnBitboard |= (pawnBitboard >> 16)
-	pawnBitboard |= (pawnBitboard >> 32)
+func calculatePassedPawns(g *game.Game, color game.PlayerColor) (result int) {
+	if color == game.White {
+		frontSpansBlack := calculatePawnSouthFill(g.Position.Black.Pawns) & ^g.Position.Black.Pawns
+		attackingSpansBlack := frontSpansBlack
+		attackingSpansBlack |= (frontSpansBlack << 1) & ^bitboardFileA //shift everything east and care for wraps
+		attackingSpansBlack |= (frontSpansBlack >> 1) & ^bitboardFileH //shift everything west and care for wraps
+		whitePassedPawns := g.Position.White.Pawns & ^attackingSpansBlack
+		for x := whitePassedPawns; x != 0; x &= x - 1 {
+			square := bits.TrailingZeros64(x)
+			result += weights[color].Midgame.PassedPawnModifier[square]
+		}
+		return
+	}
 
-	return pawnBitboard
+	//black
+	frontSpansWhite := calculatePawnNorthFill(g.Position.White.Pawns) & ^g.Position.White.Pawns
+	attackingSpansWhite := frontSpansWhite
+	attackingSpansWhite |= (frontSpansWhite << 1) & ^bitboardFileA //shift everything east and care for wraps
+	attackingSpansWhite |= (frontSpansWhite >> 1) & ^bitboardFileH //shift everything west and care for wraps
+	blackPassedPawns := g.Position.Black.Pawns & ^attackingSpansWhite
+	for x := blackPassedPawns; x != 0; x &= x - 1 {
+		square := bits.TrailingZeros64(x)
+		result += weights[color].Midgame.PassedPawnModifier[square]
+	}
+	return
 }
