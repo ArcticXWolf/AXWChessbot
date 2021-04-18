@@ -24,32 +24,32 @@ type transpositionTableEntry struct {
 }
 
 type TranspositionTable struct {
-	maxSizeInEntries int
-	entries          map[uint64]transpositionTableEntry
+	MaxSizeInEntries int
+	Entries          map[uint64]transpositionTableEntry
 }
 
 // 1 entry is 12 bytes
 func NewTranspositionTable(maxSizeInBytes int) *TranspositionTable {
 	maxSizeInEntries := maxSizeInBytes / 12
 	return &TranspositionTable{
-		maxSizeInEntries: maxSizeInEntries,
-		entries:          make(map[uint64]transpositionTableEntry, maxSizeInEntries),
+		MaxSizeInEntries: maxSizeInEntries,
+		Entries:          make(map[uint64]transpositionTableEntry, maxSizeInEntries),
 	}
 }
 
 func (tt *TranspositionTable) Empty() {
-	tt.entries = make(map[uint64]transpositionTableEntry, tt.maxSizeInEntries)
+	tt.Entries = make(map[uint64]transpositionTableEntry, tt.MaxSizeInEntries)
 }
 
 func (tt *TranspositionTable) InsertIfNeeded(hash uint64, move dragontoothmg.Move, score int, depth int, bound alphaBetaBound) {
-	if len(tt.entries) >= tt.maxSizeInEntries {
+	if len(tt.Entries) >= tt.MaxSizeInEntries {
 		tt.Empty()
 	}
 
-	entry, found := tt.entries[hash]
+	entry, found := tt.Entries[hash]
 
 	if !found {
-		tt.entries[hash] = transpositionTableEntry{
+		tt.Entries[hash] = transpositionTableEntry{
 			lock:  0,
 			move:  move,
 			score: int32(score),
@@ -72,7 +72,7 @@ func (tt *TranspositionTable) InsertIfNeeded(hash uint64, move dragontoothmg.Mov
 
 func (tt *TranspositionTable) Load(hash uint64) (move dragontoothmg.Move, score int, depth int, bound alphaBetaBound, ok bool) {
 	ok = false
-	entry, found := tt.entries[hash]
+	entry, found := tt.Entries[hash]
 
 	if !found {
 		return

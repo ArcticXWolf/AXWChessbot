@@ -174,6 +174,7 @@ func (p *UciProtocol) goCmd(messageParts []string) error {
 	infoStr += fmt.Sprintf(" time %d\n", searchObj.SearchInfo.TotalSearchTime.Milliseconds())
 	fmt.Print(infoStr)
 	p.logger.Printf("Move: %v, Info: %v", bestMove.String(), infoStr)
+	p.logger.Printf("TranspositionTable: %v / %v", len(p.transpositionTable.Entries), p.transpositionTable.MaxSizeInEntries)
 
 	return nil
 }
