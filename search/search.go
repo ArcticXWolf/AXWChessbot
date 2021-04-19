@@ -102,9 +102,9 @@ func (s *Search) alphaBeta(ctx context.Context, depthLeft, alpha, beta int, move
 		score := s.quiescenceSearch(alpha, beta, int(s.MaximumDepthQuiescence))
 		if s.Game.Result == game.BlackWon || s.Game.Result == game.WhiteWon {
 			if score > 0 {
-				score -= int(s.MaximumDepthAlphaBeta) - depthLeft // game won, minimize path to victory
+				score = 1000000 - (int(s.MaximumDepthAlphaBeta) - depthLeft) // game won, minimize path to victory
 			} else {
-				score += int(s.MaximumDepthAlphaBeta) - depthLeft // game lost, maximize path for enemy
+				score = -1000000 + (int(s.MaximumDepthAlphaBeta) - depthLeft) // game lost, maximize path for enemy
 			}
 		}
 		return moves, score, cancelled
@@ -153,7 +153,7 @@ moveIterator:
 			newMoves, newScore, newCancelled := s.alphaBeta(ctx, depthLeft-1, -beta, -alpha, m, previousMoves)
 			newScore = -newScore
 			cancelled = cancelled || newCancelled
-			//s.logger.Printf("Conc:\t%s%d %d %d %v\n", strings.Repeat("\t", int(s.MaximumDepthAlphaBeta)-depthLeft), newScore, alpha, beta, &m)
+			// s.logger.Printf("Conc:\t%s%d %v\n", strings.Repeat("\t", int(s.MaximumDepthAlphaBeta)-depthLeft), newScore, &m)
 
 			s.Game.PopMove()
 
@@ -187,7 +187,7 @@ moveIterator:
 	}
 
 	moves = append(moves, bestMove)
-	//s.logger.Printf("Node:\t%s%d %d %d %v\n", strings.Repeat("\t", int(s.MaximumDepthAlphaBeta)-depthLeft), bestScore, alpha, beta, &moves)
+	// s.logger.Printf("Node:\t%s%d %d %d %v\n", strings.Repeat("\t", int(s.MaximumDepthAlphaBeta)-depthLeft), bestScore, alpha, beta, &moves)
 	return moves, bestScore, cancelled
 }
 

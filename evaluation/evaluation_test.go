@@ -142,7 +142,7 @@ func TestEvaluation_updateTotal(t *testing.T) {
 				},
 				GameOver: true,
 			},
-			1000000,
+			100000,
 		},
 		{
 			"KQvK Checkmate Black",
@@ -158,7 +158,7 @@ func TestEvaluation_updateTotal(t *testing.T) {
 				},
 				GameOver: true,
 			},
-			-1000000,
+			-100000,
 		},
 		{
 			"KvKR Stalemate",

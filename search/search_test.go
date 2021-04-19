@@ -65,6 +65,10 @@ func BenchmarkSearchFullEvaluation9(b *testing.B)  { benchmarkSearchFullEvaluati
 func BenchmarkSearchFullEvaluation10(b *testing.B) { benchmarkSearchFullEvaluation(10, b) }
 func BenchmarkSearchFullEvaluation11(b *testing.B) { benchmarkSearchFullEvaluation(11, b) }
 
+func getMove(moveStr string) dragontoothmg.Move {
+	move, _ := dragontoothmg.ParseMove(moveStr)
+	return move
+}
 func TestSearch_SearchBestMove(t *testing.T) {
 	type fields struct {
 		Game                   *game.Game
@@ -78,6 +82,7 @@ func TestSearch_SearchBestMove(t *testing.T) {
 		want1  int
 	}{
 		{"Mate in 1 - Black", fields{game.NewFromFen("1r4k1/p4p1p/p4p2/2pn4/K3b3/3q2n1/3r4/b7 b - - 11 38"), 4, 4}, 712, 999999},
+		{"Mate in 1 - White", fields{game.NewFromFen("4k3/pp3p1p/3Kp3/3P2r1/2r5/3q4/5PPP/4b2R b - - 5 29"), 5, 2}, getMove("c4c6"), 999999},
 	}
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	evaluator := evaluation.Evaluation{}

@@ -52,9 +52,9 @@ func (e *Evaluation) GetPieceTypeValue(pieceType dragontoothmg.Piece) int {
 func (e *Evaluation) updateTotal() {
 	if e.GameOver {
 		if e.Game.Result == game.WhiteWon {
-			e.TotalScore = 1000000
+			e.TotalScore = 100000
 		} else if e.Game.Result == game.BlackWon {
-			e.TotalScore = -1000000
+			e.TotalScore = -100000
 		} else {
 			e.TotalScore = 0 // DRAW
 		}
