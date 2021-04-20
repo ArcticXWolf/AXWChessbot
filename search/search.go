@@ -244,7 +244,7 @@ func (s *Search) getMovesInOrder(depthLeft int, previousMoves []dragontoothmg.Mo
 }
 
 func (s *Search) getCapturesInOrder() []dragontoothmg.Move {
-	var captures []dragontoothmg.Move
+	var captures []dragontoothmg.Move = []dragontoothmg.Move{}
 
 	bitboardsOwn := s.Game.Position.White
 	bitboardsOpponent := s.Game.Position.Black
