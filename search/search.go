@@ -51,7 +51,7 @@ func (s *Search) SearchBestMove(ctx context.Context) (dragontoothmg.Move, int) {
 
 	s.SearchDone = true
 	s.SearchInfo.TotalSearchTime = time.Since(start)
-	s.logger.Printf("SearchInfo: %v", s.SearchInfo)
+	// s.logger.Printf("SearchInfo: %v", s.SearchInfo)
 
 	return moves[len(moves)-1], score
 }
@@ -92,14 +92,15 @@ func (s *Search) alphaBeta(ctx context.Context, depthLeft, alpha, beta int, move
 	var bestScore int = -1000000000
 	var bestMove dragontoothmg.Move
 	var alphaOriginal int = alpha
-	var moves []dragontoothmg.Move
-	var cancelled bool = false
+	var moves, newMoves []dragontoothmg.Move
+	var cancelled, newCancelled bool = false, false
+	var score, newScore int
 
 	if depthLeft <= 0 || s.Game.Result != game.GameNotOver {
 		// add leaf to nodecount, but do not count it in qnodecount (prevent overlap in both counts)
 		s.SearchInfo.NodesTraversed++
 		s.SearchInfo.QNodesTraversed--
-		score := s.quiescenceSearch(alpha, beta, int(s.MaximumDepthQuiescence))
+		score = s.quiescenceSearch(alpha, beta, int(s.MaximumDepthQuiescence))
 		if s.Game.Result == game.BlackWon || s.Game.Result == game.WhiteWon {
 			if score > 0 {
 				score = 1000000 - (int(s.MaximumDepthAlphaBeta) - depthLeft) // game won, minimize path to victory
@@ -150,7 +151,7 @@ moveIterator:
 			lastMove = m
 			s.Game.PushMove(m)
 
-			newMoves, newScore, newCancelled := s.alphaBeta(ctx, depthLeft-1, -beta, -alpha, m, previousMoves)
+			newMoves, newScore, newCancelled = s.alphaBeta(ctx, depthLeft-1, -beta, -alpha, m, previousMoves)
 			newScore = -newScore
 			cancelled = cancelled || newCancelled
 			// s.logger.Printf("Conc:\t%s%d %v\n", strings.Repeat("\t", int(s.MaximumDepthAlphaBeta)-depthLeft), newScore, &m)
@@ -192,9 +193,10 @@ moveIterator:
 }
 
 func (s *Search) quiescenceSearch(alpha, beta, depthLeft int) int {
+	var standPat, score int
 	s.SearchInfo.QNodesTraversed++
 
-	standPat := s.evaluationProvider.CalculateEvaluation(s.Game)
+	standPat = s.evaluationProvider.CalculateEvaluation(s.Game)
 	if standPat >= beta {
 		return beta
 	}
@@ -205,7 +207,7 @@ func (s *Search) quiescenceSearch(alpha, beta, depthLeft int) int {
 	if depthLeft > 0 && s.Game.Result == game.GameNotOver {
 		for _, move := range s.getCapturesInOrder() {
 			s.Game.PushMove(move)
-			score := -s.quiescenceSearch(-beta, -alpha, depthLeft-1)
+			score = -s.quiescenceSearch(-beta, -alpha, depthLeft-1)
 			s.Game.PopMove()
 
 			if score >= beta {
@@ -221,7 +223,7 @@ func (s *Search) quiescenceSearch(alpha, beta, depthLeft int) int {
 }
 
 func (s *Search) getMovesInOrder(depthLeft int, previousMoves []dragontoothmg.Move) []dragontoothmg.Move {
-	legal_moves := s.Game.Position.GenerateLegalMoves()
+	var legal_moves []dragontoothmg.Move = s.Game.Position.GenerateLegalMoves()
 
 	if len(previousMoves) > depthLeft {
 		// Find previous move in move list
@@ -242,8 +244,7 @@ func (s *Search) getMovesInOrder(depthLeft int, previousMoves []dragontoothmg.Mo
 }
 
 func (s *Search) getCapturesInOrder() []dragontoothmg.Move {
-	legalMoves := s.Game.Position.GenerateLegalMoves()
-	var captures []dragontoothmg.Move = make([]dragontoothmg.Move, 0, len(legalMoves))
+	var captures []dragontoothmg.Move
 
 	bitboardsOwn := s.Game.Position.White
 	bitboardsOpponent := s.Game.Position.Black
@@ -252,7 +253,7 @@ func (s *Search) getCapturesInOrder() []dragontoothmg.Move {
 		bitboardsOpponent = s.Game.Position.White
 	}
 
-	for _, move := range legalMoves {
+	for _, move := range s.Game.Position.GenerateLegalMoves() {
 		if bitboardsOpponent.All&(1<<move.To()) > 0 {
 			captures = append(captures, move)
 		}

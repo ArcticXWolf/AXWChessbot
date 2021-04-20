@@ -13,6 +13,12 @@ build:
 run:
 	go run go.janniklasrichter.de/axwchessbot
 
+profile: clean
+	mkdir build
+	go test -count=10 -run=^$$ -bench "^(BenchmarkSearchFullEvaluation[3-5])$$" -benchmem -o build/test.bin -cpuprofile build/cpu.out -memprofile build/mem.out go.janniklasrichter.de/axwchessbot/search
+	go tool pprof --svg build/test.bin build/mem.out > build/mem.svg
+	go tool pprof --svg build/test.bin build/cpu.out > build/cpu.svg
+
 clean:
 	rm -rf build/
 

@@ -73,6 +73,9 @@ func (p *UciProtocol) HandleInput(message string) error {
 func (p *UciProtocol) uciCmd(messageParts []string) error {
 	fmt.Printf("id name %s %s\n", p.name, p.version)
 	fmt.Printf("id author %s\n", p.author)
+	fmt.Printf("option Hash type spin default 256 min 1 max 2048")
+	fmt.Printf("option Move Overhead type spin default 200 min 1 max 1000")
+	fmt.Printf("option Max Time type spin default 30 min 2 max 300")
 	fmt.Println("uciok")
 	return nil
 }

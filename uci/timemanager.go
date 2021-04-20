@@ -49,19 +49,6 @@ func NewTimingInfo(messageParts []string) (timingInfo *UciTimingInfo) {
 }
 
 func (timingInfo *UciTimingInfo) calculateTimeoutContext(ctx context.Context, g *game.Game, options []UciOption) (context.Context, func()) {
-	if timingInfo.MovesToGo <= 0 && timingInfo.TimeWhite <= 0 && timingInfo.TimeBlack <= 0 {
-		return context.WithCancel(ctx)
-	}
-
-	if timingInfo.MovesToGo <= 0 {
-		timingInfo.MovesToGo = DefaultMovesToGo
-	}
-
-	timeLeft, increment := time.Duration(timingInfo.TimeWhite)*time.Millisecond, time.Duration(timingInfo.IncrementWhite)*time.Millisecond
-	if !g.Position.Wtomove {
-		timeLeft, increment = time.Duration(timingInfo.TimeBlack)*time.Millisecond, time.Duration(timingInfo.IncrementBlack)*time.Millisecond
-	}
-
 	moveOverhead := MoveOverhead
 	maxTime := MaxTime
 	for _, option := range options {
@@ -77,6 +64,19 @@ func (timingInfo *UciTimingInfo) calculateTimeoutContext(ctx context.Context, g 
 				maxTime = time.Duration(optionsMT) * time.Second
 			}
 		}
+	}
+
+	if timingInfo.MovesToGo <= 0 && timingInfo.TimeWhite <= 0 && timingInfo.TimeBlack <= 0 {
+		return context.WithDeadline(ctx, timingInfo.StartTimestamp.Add(maxTime))
+	}
+
+	if timingInfo.MovesToGo <= 0 {
+		timingInfo.MovesToGo = DefaultMovesToGo
+	}
+
+	timeLeft, increment := time.Duration(timingInfo.TimeWhite)*time.Millisecond, time.Duration(timingInfo.IncrementWhite)*time.Millisecond
+	if !g.Position.Wtomove {
+		timeLeft, increment = time.Duration(timingInfo.TimeBlack)*time.Millisecond, time.Duration(timingInfo.IncrementBlack)*time.Millisecond
 	}
 
 	timeLeft -= moveOverhead

@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"runtime/pprof"
 
 	"go.janniklasrichter.de/axwchessbot/uci"
 )
@@ -21,13 +20,6 @@ var (
 
 func main() {
 	logger := log.New(os.Stderr, "", log.LstdFlags)
-
-	f, perr := os.Create("cpu.pprof")
-	if perr != nil {
-		logger.Fatal(perr)
-	}
-	pprof.StartCPUProfile(f)
-	defer pprof.StopCPUProfile()
 
 	logger.Println(engineName, "Version", version, "BuildDate", date, "GitCommitHash", commit)
 

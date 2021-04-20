@@ -21,7 +21,7 @@ func benchmarkSearchEvaluation(evaluator evaluation_provider.EvaluationProvider,
 	var start time.Time
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	ctx := context.Background()
-	transpositionTable := NewTranspositionTable(1000000)
+	transpositionTable := NewTranspositionTable(268435456)
 
 	for n := 0; n < b.N; n++ {
 		start = time.Now()

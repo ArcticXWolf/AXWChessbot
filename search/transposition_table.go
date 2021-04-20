@@ -14,7 +14,6 @@ const (
 	alphaBetaBoundUpper
 )
 
-// 96 bits = 12 Bytes
 type transpositionTableEntry struct {
 	lock  int32
 	move  dragontoothmg.Move
@@ -28,9 +27,8 @@ type TranspositionTable struct {
 	Entries          map[uint64]transpositionTableEntry
 }
 
-// 1 entry is 12 bytes
 func NewTranspositionTable(maxSizeInBytes int) *TranspositionTable {
-	maxSizeInEntries := maxSizeInBytes / 12
+	maxSizeInEntries := maxSizeInBytes / 100 // Just a guesstimate, I still have not found how to calculate the bytesize of a map
 	return &TranspositionTable{
 		MaxSizeInEntries: maxSizeInEntries,
 		Entries:          make(map[uint64]transpositionTableEntry, maxSizeInEntries),
