@@ -17,26 +17,35 @@ type SearchInfo struct {
 	MaxDepthCompleted uint
 	CacheHits         uint
 	CacheUse          uint
-	TotalSearchTime   time.Duration
+	SearchTimeStart   time.Time
+	SearchDuration    time.Duration
+}
+
+type ProtocolLogger interface {
+	SendInfo(depth, score, nodes, nps int, time time.Duration, pv []dragontoothmg.Move)
 }
 
 type Search struct {
 	Game                   *game.Game
+	protocol               ProtocolLogger
 	logger                 *log.Logger
 	evaluationProvider     evaluation_provider.EvaluationProvider
 	transpositionTable     *TranspositionTable
+	killerMoveTable        *killerMoveTable
 	SearchDone             bool
 	MaximumDepthAlphaBeta  uint
 	MaximumDepthQuiescence uint
 	SearchInfo             SearchInfo
 }
 
-func New(game *game.Game, logger *log.Logger, transpositionTable *TranspositionTable, evaluationProvider evaluation_provider.EvaluationProvider, maxABDepth, maxQDepth uint) *Search {
+func New(game *game.Game, protocol ProtocolLogger, logger *log.Logger, transpositionTable *TranspositionTable, evaluationProvider evaluation_provider.EvaluationProvider, maxABDepth, maxQDepth uint) *Search {
 	return &Search{
 		Game:                   game,
+		protocol:               protocol,
 		logger:                 logger,
 		evaluationProvider:     evaluationProvider,
 		transpositionTable:     transpositionTable,
+		killerMoveTable:        newKillerMoveTable(int(maxABDepth)),
 		SearchDone:             false,
 		MaximumDepthAlphaBeta:  maxABDepth,
 		MaximumDepthQuiescence: maxQDepth,
@@ -45,13 +54,20 @@ func New(game *game.Game, logger *log.Logger, transpositionTable *TranspositionT
 }
 
 func (s *Search) SearchBestMove(ctx context.Context) (dragontoothmg.Move, int) {
-	start := time.Now()
+	s.SearchInfo.SearchTimeStart = time.Now()
 
 	moves, score := s.iterativeDeepening(ctx)
 
 	s.SearchDone = true
-	s.SearchInfo.TotalSearchTime = time.Since(start)
-	// s.logger.Printf("SearchInfo: %v", s.SearchInfo)
+	s.SearchInfo.SearchDuration = time.Since(s.SearchInfo.SearchTimeStart)
+	s.protocol.SendInfo(
+		int(s.SearchInfo.MaxDepthCompleted),
+		score,
+		int(s.SearchInfo.NodesTraversed+s.SearchInfo.QNodesTraversed),
+		int(float64(s.SearchInfo.NodesTraversed+s.SearchInfo.QNodesTraversed)/s.SearchInfo.SearchDuration.Seconds()),
+		time.Duration(s.SearchInfo.SearchDuration.Milliseconds()),
+		moves,
+	)
 
 	return moves[len(moves)-1], score
 }
@@ -62,6 +78,15 @@ func (s *Search) iterativeDeepening(ctx context.Context) ([]dragontoothmg.Move, 
 	var cancelled bool
 	moves, score, _ = s.alphaBetaRoot(ctx, 1, moves)
 	s.SearchInfo.MaxDepthCompleted = 1
+	s.SearchInfo.SearchDuration = time.Since(s.SearchInfo.SearchTimeStart)
+	s.protocol.SendInfo(
+		int(s.SearchInfo.MaxDepthCompleted),
+		score,
+		int(s.SearchInfo.NodesTraversed),
+		int(float64(s.SearchInfo.NodesTraversed)/s.SearchInfo.SearchDuration.Seconds()),
+		time.Duration(s.SearchInfo.SearchDuration.Milliseconds()),
+		moves,
+	)
 
 	for i := 2; uint(i) <= s.MaximumDepthAlphaBeta; i++ {
 		select {
@@ -72,6 +97,15 @@ func (s *Search) iterativeDeepening(ctx context.Context) ([]dragontoothmg.Move, 
 			if !cancelled {
 				moves, score = movesNew, scoreNew
 				s.SearchInfo.MaxDepthCompleted = uint(i)
+				s.SearchInfo.SearchDuration = time.Since(s.SearchInfo.SearchTimeStart)
+				s.protocol.SendInfo(
+					int(s.SearchInfo.MaxDepthCompleted),
+					score,
+					int(s.SearchInfo.NodesTraversed),
+					int(float64(s.SearchInfo.NodesTraversed)/s.SearchInfo.SearchDuration.Seconds()),
+					time.Duration(s.SearchInfo.SearchDuration.Milliseconds()),
+					moves,
+				)
 			}
 		}
 	}
@@ -84,11 +118,12 @@ func (s *Search) alphaBetaRoot(ctx context.Context, depth int, previousMoves []d
 	alpha := -1000000000
 	var move dragontoothmg.Move
 
-	resultMove, resultScore, cancelled := s.alphaBeta(ctx, depth, alpha, beta, move, previousMoves)
+	s.killerMoveTable.clear()
+	resultMove, resultScore, cancelled := s.alphaBeta(ctx, depth, 0, alpha, beta, move, previousMoves)
 	return resultMove, resultScore, cancelled
 }
 
-func (s *Search) alphaBeta(ctx context.Context, depthLeft, alpha, beta int, move dragontoothmg.Move, previousMoves []dragontoothmg.Move) ([]dragontoothmg.Move, int, bool) {
+func (s *Search) alphaBeta(ctx context.Context, depthLeft, ply, alpha, beta int, move dragontoothmg.Move, previousMoves []dragontoothmg.Move) ([]dragontoothmg.Move, int, bool) {
 	var bestScore int = -1000000000
 	var bestMove dragontoothmg.Move
 	var alphaOriginal int = alpha
@@ -119,6 +154,9 @@ func (s *Search) alphaBeta(ctx context.Context, depthLeft, alpha, beta int, move
 		if cacheDepth >= depthLeft {
 			if cacheBound == alphaBetaBoundExact {
 				s.SearchInfo.CacheUse++
+				if !isCaptureOrPromotionMove(s.Game, cacheMove) {
+					s.killerMoveTable.update(ply, cacheMove)
+				}
 				moves = append(moves, cacheMove)
 				return moves, cacheScore, cancelled
 			} else if cacheBound == alphaBetaBoundLower {
@@ -132,13 +170,16 @@ func (s *Search) alphaBeta(ctx context.Context, depthLeft, alpha, beta int, move
 			}
 			if alpha >= beta {
 				s.SearchInfo.CacheUse++
+				if !isCaptureOrPromotionMove(s.Game, cacheMove) {
+					s.killerMoveTable.update(ply, cacheMove)
+				}
 				moves = append(moves, cacheMove)
 				return moves, cacheScore, cancelled
 			}
 		}
 	}
 
-	legal_moves := s.getMovesInOrder(depthLeft, previousMoves)
+	legal_moves := s.getMovesInOrder(ply, depthLeft, previousMoves)
 
 	var lastMove dragontoothmg.Move
 moveIterator:
@@ -151,7 +192,7 @@ moveIterator:
 			lastMove = m
 			s.Game.PushMove(m)
 
-			newMoves, newScore, newCancelled = s.alphaBeta(ctx, depthLeft-1, -beta, -alpha, m, previousMoves)
+			newMoves, newScore, newCancelled = s.alphaBeta(ctx, depthLeft-1, ply+1, -beta, -alpha, m, previousMoves)
 			newScore = -newScore
 			cancelled = cancelled || newCancelled
 			// s.logger.Printf("Conc:\t%s%d %v\n", strings.Repeat("\t", int(s.MaximumDepthAlphaBeta)-depthLeft), newScore, &m)
@@ -167,6 +208,9 @@ moveIterator:
 				alpha = newScore
 			}
 			if alpha >= beta {
+				if !isCaptureOrPromotionMove(s.Game, m) {
+					s.killerMoveTable.update(ply, m)
+				}
 				break moveIterator
 			}
 		}
@@ -222,11 +266,10 @@ func (s *Search) quiescenceSearch(alpha, beta, depthLeft int) int {
 	return alpha
 }
 
-func (s *Search) getMovesInOrder(depthLeft int, previousMoves []dragontoothmg.Move) []dragontoothmg.Move {
+func (s *Search) getMovesInOrder(ply int, depthLeft int, previousMoves []dragontoothmg.Move) []dragontoothmg.Move {
 	var legal_moves []dragontoothmg.Move = s.Game.Position.GenerateLegalMoves()
 
 	if len(previousMoves) > depthLeft {
-		// Find previous move in move list
 		var index int = -1
 		for i, m := range legal_moves {
 			if previousMoves[depthLeft-1] == m {
@@ -234,9 +277,34 @@ func (s *Search) getMovesInOrder(depthLeft int, previousMoves []dragontoothmg.Mo
 			}
 		}
 
-		// swap if found
 		if index > 0 {
 			legal_moves[0], legal_moves[index] = legal_moves[index], legal_moves[0]
+		}
+	}
+
+	move1, found1, move2, found2 := s.killerMoveTable.fetch(ply)
+	if found1 {
+		var index int = -1
+		for i, m := range legal_moves {
+			if move1 == m {
+				index = i
+			}
+		}
+
+		if index > 1 {
+			legal_moves[1], legal_moves[index] = legal_moves[index], legal_moves[1]
+		}
+	}
+	if found2 {
+		var index int = -1
+		for i, m := range legal_moves {
+			if move2 == m {
+				index = i
+			}
+		}
+
+		if index > 2 {
+			legal_moves[2], legal_moves[index] = legal_moves[index], legal_moves[2]
 		}
 	}
 
@@ -264,28 +332,4 @@ func (s *Search) getCapturesInOrder() []dragontoothmg.Move {
 	})
 
 	return captures
-}
-
-func (s *Search) getCaptureMVVLVA(move dragontoothmg.Move, bitboardsOwn dragontoothmg.Bitboards, bitboardsOpponent dragontoothmg.Bitboards) (score int) {
-	pieceTypeFrom, _ := s.getPieceTypeAtPosition(move.From(), bitboardsOwn)
-	pieceTypeTo, _ := s.getPieceTypeAtPosition(move.To(), bitboardsOpponent)
-
-	return (1200 - s.evaluationProvider.GetPieceTypeValue(pieceTypeTo)) + int(pieceTypeFrom)
-}
-
-func (s *Search) getPieceTypeAtPosition(position uint8, bitboards dragontoothmg.Bitboards) (pieceType dragontoothmg.Piece, occupied bool) {
-	if bitboards.Pawns&(1<<position) > 0 {
-		return dragontoothmg.Pawn, true
-	} else if bitboards.Knights&(1<<position) > 0 {
-		return dragontoothmg.Knight, true
-	} else if bitboards.Bishops&(1<<position) > 0 {
-		return dragontoothmg.Bishop, true
-	} else if bitboards.Rooks&(1<<position) > 0 {
-		return dragontoothmg.Rook, true
-	} else if bitboards.Queens&(1<<position) > 0 {
-		return dragontoothmg.Queen, true
-	} else if bitboards.Kings&(1<<position) > 0 {
-		return dragontoothmg.King, true
-	}
-	return
 }

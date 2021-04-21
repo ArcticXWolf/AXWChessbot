@@ -44,6 +44,7 @@ implemented.
     * Iterative deepening
     * Simple Move ordering
     * Transposition tables as cache
+    * Killer move heuristics
 
 ## Features ideas
 
@@ -51,7 +52,6 @@ implemented.
     * Pawnshield bonus
     * Blocked piece penalty
 * Search improvements
-    * Killer move heuristics
     * Multiprocessing (Lazy SMP?)
 
 ## Used materials / Research

@@ -7,7 +7,9 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/dylhunn/dragontoothmg"
 	"go.janniklasrichter.de/axwchessbot/evaluation"
 	"go.janniklasrichter.de/axwchessbot/game"
 	"go.janniklasrichter.de/axwchessbot/search"
@@ -73,9 +75,9 @@ func (p *UciProtocol) HandleInput(message string) error {
 func (p *UciProtocol) uciCmd(messageParts []string) error {
 	fmt.Printf("id name %s %s\n", p.name, p.version)
 	fmt.Printf("id author %s\n", p.author)
-	fmt.Printf("option Hash type spin default 256 min 1 max 2048\n")
-	fmt.Printf("option Move Overhead type spin default 200 min 1 max 1000\n")
-	fmt.Printf("option Max Time type spin default 30 min 2 max 300\n")
+	fmt.Printf("option name Hash type spin default 256 min 1 max 2048\n")
+	fmt.Printf("option name Move Overhead type spin default 200 min 1 max 1000\n")
+	fmt.Printf("option name Max Time type spin default 30 min 2 max 300\n")
 	fmt.Println("uciok")
 	return nil
 }
@@ -166,17 +168,10 @@ func (p *UciProtocol) goCmd(messageParts []string) error {
 	defer cancel()
 
 	evaluator := evaluation.Evaluation{}
-	searchObj := search.New(p.currentGame, p.logger, p.transpositionTable, &evaluator, 40, 10)
-	bestMove, score := searchObj.SearchBestMove(context)
+	searchObj := search.New(p.currentGame, p, p.logger, p.transpositionTable, &evaluator, 40, 10)
+	bestMove, _ := searchObj.SearchBestMove(context)
 
 	fmt.Printf("bestmove %v\n", bestMove.String())
-	infoStr := fmt.Sprintf("info depth %d", searchObj.SearchInfo.MaxDepthCompleted)
-	infoStr += fmt.Sprintf(" score cp %d", int(score))
-	infoStr += fmt.Sprintf(" nodes %d", searchObj.SearchInfo.NodesTraversed)
-	infoStr += fmt.Sprintf(" nps %d", int(float64(searchObj.SearchInfo.NodesTraversed)/searchObj.SearchInfo.TotalSearchTime.Seconds()))
-	infoStr += fmt.Sprintf(" time %d\n", searchObj.SearchInfo.TotalSearchTime.Milliseconds())
-	fmt.Print(infoStr)
-	p.logger.Printf("Move: %v, Info: %v", bestMove.String(), infoStr)
 	p.logger.Printf("TranspositionTable: %v / %v", len(p.transpositionTable.Entries), p.transpositionTable.MaxSizeInEntries)
 
 	return nil
@@ -199,4 +194,20 @@ func (p *UciProtocol) recreateTranspositionTable() {
 	}
 
 	p.transpositionTable = search.NewTranspositionTable(transpositionTableSize)
+}
+
+func (p *UciProtocol) SendInfo(depth, score, nodes, nps int, time time.Duration, pv []dragontoothmg.Move) {
+	infoStr := fmt.Sprintf("info depth %d", depth)
+	infoStr += fmt.Sprintf(" score cp %d", score)
+	infoStr += fmt.Sprintf(" nodes %d", nodes)
+	infoStr += fmt.Sprintf(" nps %d", nps)
+	infoStr += fmt.Sprintf(" time %d", time)
+	if len(pv) > 0 {
+		infoStr += " pv"
+		for i := len(pv) - 1; i >= 0; i-- {
+			infoStr += fmt.Sprintf(" %s", &(pv[i]))
+		}
+	}
+	infoStr += "\n"
+	fmt.Print(infoStr)
 }
