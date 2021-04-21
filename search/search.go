@@ -184,12 +184,12 @@ func (s *Search) alphaBeta(ctx context.Context, depthLeft, ply, alpha, beta int,
 	var lastMove dragontoothmg.Move
 moveIterator:
 	for _, m := range legal_moves {
+		lastMove = m
 		select {
 		case <-ctx.Done():
 			cancelled = true
 			break moveIterator
 		default:
-			lastMove = m
 			s.Game.PushMove(m)
 
 			newMoves, newScore, newCancelled = s.alphaBeta(ctx, depthLeft-1, ply+1, -beta, -alpha, m, previousMoves)
