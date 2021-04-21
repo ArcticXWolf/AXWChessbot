@@ -49,7 +49,7 @@ func NewTimingInfo(messageParts []string) (timingInfo *UciTimingInfo) {
 
 func (timingInfo *UciTimingInfo) calculateTimeoutContext(ctx context.Context, g *game.Game, options []UciOption) (context.Context, func()) {
 	if timingInfo.MoveTime > 0 {
-		return context.WithDeadline(ctx, timingInfo.StartTimestamp.Add(time.Duration(timingInfo.MoveTime)))
+		return context.WithDeadline(ctx, timingInfo.StartTimestamp.Add(time.Duration(timingInfo.MoveTime*int(time.Millisecond))))
 	}
 
 	maxTime := MaxTime
