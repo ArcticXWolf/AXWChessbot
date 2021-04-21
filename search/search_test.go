@@ -16,16 +16,22 @@ import (
 	"go.janniklasrichter.de/axwchessbot/game"
 )
 
+type DummyProtocol struct{}
+
+func (p *DummyProtocol) SendInfo(depth, score, nodes, nps int, time time.Duration, pv []dragontoothmg.Move) {
+}
+
 func benchmarkSearchEvaluation(evaluator evaluation_provider.EvaluationProvider, abdepth uint, b *testing.B) {
 	var nps float64
 	var start time.Time
 	logger := log.New(os.Stderr, "", log.LstdFlags)
+	protocol := &DummyProtocol{}
 	ctx := context.Background()
 	transpositionTable := NewTranspositionTable(268435456)
 
 	for n := 0; n < b.N; n++ {
 		start = time.Now()
-		searchObj := New(game.New(), logger, transpositionTable, evaluator, abdepth, 1)
+		searchObj := New(game.New(), protocol, logger, transpositionTable, evaluator, abdepth, 1)
 		searchObj.SearchBestMove(ctx)
 		nps += float64(searchObj.SearchInfo.NodesTraversed) / float64(time.Since(start).Seconds())
 	}
@@ -87,13 +93,14 @@ func TestSearch_SearchBestMove(t *testing.T) {
 		{"Mate in 1 from Issue #2", fields{game.NewFromFen("2rq1rk1/1Rp3pp/p2pN3/3Nn3/b3pb1P/2B3Q1/2PP1PP1/1R4K1 w - - 0 23"), 3, 2}, []dragontoothmg.Move{getMove("g3g7")}, []dragontoothmg.Move{0}},
 		{"Avoid mate in 1 from https://lichess.org/9FeZycDP/black#65", fields{game.NewFromFen("1r3k1R/5p2/5p2/4rQ2/p3p3/n1b3P1/4qP1P/5RK1 b - - 4 33"), 3, 2}, []dragontoothmg.Move{}, []dragontoothmg.Move{0, getMove("f8g7")}},
 	}
+	protocol := &DummyProtocol{}
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	evaluator := evaluation.Evaluation{}
 	transpositionTable := NewTranspositionTable(1000000)
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := New(tt.fields.Game, logger, transpositionTable, &evaluator, tt.fields.MaximumDepthAlphaBeta, tt.fields.MaximumDepthQuiescence)
+			s := New(tt.fields.Game, protocol, logger, transpositionTable, &evaluator, tt.fields.MaximumDepthAlphaBeta, tt.fields.MaximumDepthQuiescence)
 			got, _ := s.SearchBestMove(ctx)
 
 			found := len(tt.wantBM) == 0
@@ -137,6 +144,7 @@ func TestCrashingGames(t *testing.T) {
 		},
 	}
 
+	protocol := &DummyProtocol{}
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	evaluator := evaluation.Evaluation{}
 	transpositionTable := NewTranspositionTable(1000000)
@@ -151,7 +159,7 @@ func TestCrashingGames(t *testing.T) {
 				game.PushMove(move)
 			}
 
-			s := New(game, logger, transpositionTable, &evaluator, tt.fields.MaximumDepthAlphaBeta, tt.fields.MaximumDepthQuiescence)
+			s := New(game, protocol, logger, transpositionTable, &evaluator, tt.fields.MaximumDepthAlphaBeta, tt.fields.MaximumDepthQuiescence)
 			s.SearchBestMove(ctx)
 		})
 	}
@@ -172,11 +180,13 @@ func TestSearch_getCapturesInOrder(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			protocol := &DummyProtocol{}
 			logger := log.New(os.Stdout, "", log.LstdFlags)
 			evaluator := evaluation.Evaluation{}
 			transpositionTable := NewTranspositionTable(1000000)
 			s := &Search{
 				Game:               tt.fields.Game,
+				protocol:           protocol,
 				logger:             logger,
 				evaluationProvider: &evaluator,
 				transpositionTable: transpositionTable,
