@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -16,9 +17,27 @@ import (
 	"go.janniklasrichter.de/axwchessbot/game"
 )
 
-type DummyProtocol struct{}
+type DummyProtocol struct {
+	t *testing.T
+}
 
 func (p *DummyProtocol) SendInfo(depth, score, nodes, nps int, time time.Duration, pv []dragontoothmg.Move) {
+	if p.t == nil {
+		return
+	}
+	infoStr := fmt.Sprintf("info depth %d", depth)
+	infoStr += fmt.Sprintf(" score cp %d", score)
+	infoStr += fmt.Sprintf(" nodes %d", nodes)
+	infoStr += fmt.Sprintf(" nps %d", nps)
+	infoStr += fmt.Sprintf(" time %d", time)
+	if len(pv) > 0 {
+		infoStr += " pv"
+		for i := len(pv) - 1; i >= 0; i-- {
+			infoStr += fmt.Sprintf(" %s", &(pv[i]))
+		}
+	}
+	infoStr += "\n"
+	p.t.Log(infoStr)
 }
 
 func benchmarkSearchEvaluation(evaluator evaluation_provider.EvaluationProvider, abdepth uint, b *testing.B) {
@@ -91,15 +110,16 @@ func TestSearch_SearchBestMove(t *testing.T) {
 		{"Mate in 1 - White", fields{game.NewFromFen("4k3/pp3p1p/3Kp3/3P2r1/2r5/3q4/5PPP/4b2R b - - 5 29"), 3, 2}, []dragontoothmg.Move{getMove("c4c6")}, []dragontoothmg.Move{0}},
 		{"Avoid Nullmove from Issue #2", fields{game.NewFromFen("1r4k1/2p4p/B5pP/P2p1p2/3PpP2/1nP1PnQP/q5K1/B1R5 w - - 1 40"), 3, 2}, []dragontoothmg.Move{}, []dragontoothmg.Move{0}},
 		{"Mate in 1 from Issue #2", fields{game.NewFromFen("2rq1rk1/1Rp3pp/p2pN3/3Nn3/b3pb1P/2B3Q1/2PP1PP1/1R4K1 w - - 0 23"), 3, 2}, []dragontoothmg.Move{getMove("g3g7")}, []dragontoothmg.Move{0}},
-		{"Avoid mate in 1 from https://lichess.org/9FeZycDP/black#65", fields{game.NewFromFen("1r3k1R/5p2/5p2/4rQ2/p3p3/n1b3P1/4qP1P/5RK1 b - - 4 33"), 3, 2}, []dragontoothmg.Move{}, []dragontoothmg.Move{0, getMove("f8g7")}},
+		{"Avoid mate in 1 from https://lichess.org/9FeZycDP/black#65", fields{game.NewFromFen("1r3k1R/5p2/5p2/4rQ2/p3p3/n1b3P1/4qP1P/5RK1 b - - 4 33"), 6, 3}, []dragontoothmg.Move{}, []dragontoothmg.Move{0, getMove("f8g7")}},
+		{"Avoid mate in 1 from #6", fields{game.NewFromFen("3r2k1/rp1n3p/2pb2p1/p1n3P1/2PBP3/P1N3q1/1PQ1B3/3R1R1K w - - 4 35"), 3, 3}, []dragontoothmg.Move{}, []dragontoothmg.Move{0, getMove("d4f2")}},
 	}
-	protocol := &DummyProtocol{}
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	evaluator := evaluation.Evaluation{}
 	transpositionTable := NewTranspositionTable(1000000)
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			protocol := &DummyProtocol{t: t}
 			s := New(tt.fields.Game, protocol, logger, transpositionTable, &evaluator, tt.fields.MaximumDepthAlphaBeta, tt.fields.MaximumDepthQuiescence)
 			got, _ := s.SearchBestMove(ctx)
 

@@ -27,6 +27,7 @@ func TestGameOverDetection(t *testing.T) {
 		{"Draw FiftyMoveRule", args{"rNB1k2r/ppp2ppp/3p3B/3np2Q/3NP2q/3P3b/PPP2PPP/Rnb1K2R w - - 100 43"}, Draw, FiftyMoveRule},
 		{"GameNotOver KBvKB", args{"8/2k1b3/8/8/4B3/5K2/8/8 w - - 0 1"}, GameNotOver, NoDraw},
 		{"King Missing", args{"8/8/8/8/8/5K2/8/8 w - - 0 1"}, GameNotOver, NoDraw},
+		{"GameOver from #6", args{"3r2k1/rp1n3p/2pb2p1/p1n3P1/2P1P3/P1N5/1PQ1BB1q/3R1R1K w - - 6 36"}, BlackWon, NoDraw},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

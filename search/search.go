@@ -12,13 +12,14 @@ import (
 )
 
 type SearchInfo struct {
-	NodesTraversed    uint
-	QNodesTraversed   uint
-	MaxDepthCompleted uint
-	CacheHits         uint
-	CacheUse          uint
-	SearchTimeStart   time.Time
-	SearchDuration    time.Duration
+	NodesTraversed     uint
+	QNodesTraversed    uint
+	MaxDepthCompleted  uint
+	MaxQDepthCompleted uint
+	CacheHits          uint
+	CacheUse           uint
+	SearchTimeStart    time.Time
+	SearchDuration     time.Duration
 }
 
 type ProtocolLogger interface {
@@ -76,7 +77,8 @@ func (s *Search) iterativeDeepening(ctx context.Context) ([]dragontoothmg.Move, 
 	var moves, movesNew []dragontoothmg.Move
 	var score, scoreNew int
 	var cancelled bool
-	moves, score, _ = s.alphaBetaRoot(ctx, 1, moves)
+	var qdepth int = 0
+	moves, score, _ = s.alphaBetaRoot(ctx, 1, qdepth, moves)
 	s.SearchInfo.MaxDepthCompleted = 1
 	s.SearchInfo.SearchDuration = time.Since(s.SearchInfo.SearchTimeStart)
 	s.protocol.SendInfo(
@@ -93,7 +95,11 @@ func (s *Search) iterativeDeepening(ctx context.Context) ([]dragontoothmg.Move, 
 		case <-ctx.Done():
 			return moves, score
 		default:
-			movesNew, scoreNew, cancelled = s.alphaBetaRoot(ctx, i, moves)
+			qdepth = int(i / 2)
+			if qdepth > int(s.MaximumDepthQuiescence) {
+				qdepth = int(s.MaximumDepthQuiescence)
+			}
+			movesNew, scoreNew, cancelled = s.alphaBetaRoot(ctx, i, qdepth, moves)
 			if !cancelled {
 				moves, score = movesNew, scoreNew
 				s.SearchInfo.MaxDepthCompleted = uint(i)
@@ -113,17 +119,17 @@ func (s *Search) iterativeDeepening(ctx context.Context) ([]dragontoothmg.Move, 
 	return moves, score
 }
 
-func (s *Search) alphaBetaRoot(ctx context.Context, depth int, previousMoves []dragontoothmg.Move) ([]dragontoothmg.Move, int, bool) {
+func (s *Search) alphaBetaRoot(ctx context.Context, depth, qdepth int, previousMoves []dragontoothmg.Move) ([]dragontoothmg.Move, int, bool) {
 	beta := 1000000000
 	alpha := -1000000000
 	var move dragontoothmg.Move
 
 	s.killerMoveTable.clear()
-	resultMove, resultScore, cancelled := s.alphaBeta(ctx, depth, 0, alpha, beta, move, previousMoves)
+	resultMove, resultScore, cancelled := s.alphaBeta(ctx, depth, qdepth, 0, alpha, beta, move, previousMoves)
 	return resultMove, resultScore, cancelled
 }
 
-func (s *Search) alphaBeta(ctx context.Context, depthLeft, ply, alpha, beta int, move dragontoothmg.Move, previousMoves []dragontoothmg.Move) ([]dragontoothmg.Move, int, bool) {
+func (s *Search) alphaBeta(ctx context.Context, depthLeft, qdepth, ply, alpha, beta int, move dragontoothmg.Move, previousMoves []dragontoothmg.Move) ([]dragontoothmg.Move, int, bool) {
 	var bestScore int = -1000000000
 	var bestMove dragontoothmg.Move
 	var alphaOriginal int = alpha
@@ -135,12 +141,12 @@ func (s *Search) alphaBeta(ctx context.Context, depthLeft, ply, alpha, beta int,
 		// add leaf to nodecount, but do not count it in qnodecount (prevent overlap in both counts)
 		s.SearchInfo.NodesTraversed++
 		s.SearchInfo.QNodesTraversed--
-		score = s.quiescenceSearch(alpha, beta, int(s.MaximumDepthQuiescence))
+		score = s.quiescenceSearch(alpha, beta, qdepth, ply)
 		if s.Game.Result == game.BlackWon || s.Game.Result == game.WhiteWon {
 			if score > 0 {
-				score = 1000000 - (int(s.MaximumDepthAlphaBeta) - depthLeft) // game won, minimize path to victory
+				score = 1000000 - ply // game won, minimize path to victory
 			} else {
-				score = -1000000 + (int(s.MaximumDepthAlphaBeta) - depthLeft) // game lost, maximize path for enemy
+				score = -1000000 + ply // game lost, maximize path for enemy
 			}
 		}
 		return moves, score, cancelled
@@ -192,10 +198,10 @@ moveIterator:
 		default:
 			s.Game.PushMove(m)
 
-			newMoves, newScore, newCancelled = s.alphaBeta(ctx, depthLeft-1, ply+1, -beta, -alpha, m, previousMoves)
+			newMoves, newScore, newCancelled = s.alphaBeta(ctx, depthLeft-1, qdepth, ply+1, -beta, -alpha, m, previousMoves)
 			newScore = -newScore
 			cancelled = cancelled || newCancelled
-			// s.logger.Printf("Conc:\t%s%d %v\n", strings.Repeat("\t", int(s.MaximumDepthAlphaBeta)-depthLeft), newScore, &m)
+			//s.logger.Printf("Conc: %11d a:%11d b:%11d \t%s%v (%d)\n", bestScore, alpha, beta, strings.Repeat("\t", ply), &m, newScore)
 
 			s.Game.PopMove()
 
@@ -232,15 +238,18 @@ moveIterator:
 	}
 
 	moves = append(moves, bestMove)
-	// s.logger.Printf("Node:\t%s%d %d %d %v\n", strings.Repeat("\t", int(s.MaximumDepthAlphaBeta)-depthLeft), bestScore, alpha, beta, &moves)
+	//s.logger.Printf("Node: %11d a:%11d b:%11d \t%s%v\n", bestScore, alpha, beta, strings.Repeat("\t", ply), &moves)
 	return moves, bestScore, cancelled
 }
 
-func (s *Search) quiescenceSearch(alpha, beta, depthLeft int) int {
+func (s *Search) quiescenceSearch(alpha, beta, depthLeft, ply int) int {
 	var standPat, score int
 	s.SearchInfo.QNodesTraversed++
 
 	standPat = s.evaluationProvider.CalculateEvaluation(s.Game)
+	if depthLeft <= 0 {
+		return standPat
+	}
 	if standPat >= beta {
 		return beta
 	}
@@ -248,21 +257,29 @@ func (s *Search) quiescenceSearch(alpha, beta, depthLeft int) int {
 		alpha = standPat
 	}
 
-	if depthLeft > 0 && s.Game.Result == game.GameNotOver {
-		for _, move := range s.getCapturesInOrder() {
-			s.Game.PushMove(move)
-			score = -s.quiescenceSearch(-beta, -alpha, depthLeft-1)
-			s.Game.PopMove()
-
-			if score >= beta {
-				return beta
-			}
-			if score > alpha {
-				alpha = score
-			}
+	if s.Game.Result == game.BlackWon || s.Game.Result == game.WhiteWon {
+		if score > 0 {
+			return 1000000 - ply // game won, minimize path to victory
+		} else {
+			return -1000000 + ply // game lost, maximize path for enemy
 		}
 	}
 
+	for _, move := range s.getCapturesInOrder() {
+		s.Game.PushMove(move)
+		score = -s.quiescenceSearch(-beta, -alpha, depthLeft-1, ply+1)
+		//s.logger.Printf("Qonc: %11s a:%11d b:%11d \t%s%v (%d)\n", "-------", alpha, beta, strings.Repeat("\t", ply+1), &move, score)
+		s.Game.PopMove()
+
+		if score >= beta {
+			return beta
+		}
+		if score > alpha {
+			alpha = score
+		}
+	}
+
+	//s.logger.Printf("Node: %11s a:%11d b:%11d \t%s%d\n", "-------", alpha, beta, strings.Repeat("\t", ply+1), alpha)
 	return alpha
 }
 
