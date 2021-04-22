@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"math/bits"
+	"reflect"
 
 	"github.com/dylhunn/dragontoothmg"
 )
@@ -225,4 +226,13 @@ func (g *Game) PopMove() error {
 	g.DrawReason = unapplyGameState.DrawReason
 
 	return nil
+}
+
+func (g *Game) GetEnPassentSquare() uint8 {
+	value := reflect.ValueOf(g.Position).Elem().FieldByName("enpassant")
+	if value.Kind() != reflect.Uint8 {
+		return 0
+	}
+
+	return uint8(value.Uint())
 }

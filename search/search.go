@@ -339,7 +339,7 @@ func (s *Search) getCapturesInOrder() []dragontoothmg.Move {
 	}
 
 	for _, move := range s.Game.Position.GenerateLegalMoves() {
-		if bitboardsOpponent.All&(1<<move.To()) > 0 {
+		if isCaptureOrPromotionMove(s.Game, move) {
 			captures = append(captures, move)
 		}
 	}

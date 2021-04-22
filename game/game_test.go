@@ -105,3 +105,23 @@ func TestPopNoMoves(t *testing.T) {
 		t.Errorf("PopNoMoves = %v, is not an error", err)
 	}
 }
+
+func TestGame_GetEnPassentSquare(t *testing.T) {
+	tests := []struct {
+		name string
+		game *Game
+		want uint8
+	}{
+		{"Startposition", New(), 0},
+		{"On c6", NewFromFen("rnbqkbnr/pp3ppp/3p4/2pPp3/4P3/8/PPP2PPP/RNBQKBNR w KQkq c6 0 41"), 42},
+		{"On b3", NewFromFen("rnbqkbnr/pp3ppp/3p4/3Pp3/1Pp1P3/5P2/P1P3PP/RNBQKBNR b KQkq b3 0 5"), 17},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if got := tt.game.GetEnPassentSquare(); got != tt.want {
+				t.Errorf("Game.GetEnPassentSquare() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

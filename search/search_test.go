@@ -90,10 +90,6 @@ func BenchmarkSearchFullEvaluation9(b *testing.B)  { benchmarkSearchFullEvaluati
 func BenchmarkSearchFullEvaluation10(b *testing.B) { benchmarkSearchFullEvaluation(10, b) }
 func BenchmarkSearchFullEvaluation11(b *testing.B) { benchmarkSearchFullEvaluation(11, b) }
 
-func getMove(moveStr string) dragontoothmg.Move {
-	move, _ := dragontoothmg.ParseMove(moveStr)
-	return move
-}
 func TestSearch_SearchBestMove(t *testing.T) {
 	type fields struct {
 		Game                   *game.Game

@@ -5,6 +5,11 @@ import (
 	"go.janniklasrichter.de/axwchessbot/game"
 )
 
+func getMove(moveStr string) dragontoothmg.Move {
+	move, _ := dragontoothmg.ParseMove(moveStr)
+	return move
+}
+
 func (s *Search) getCaptureMVVLVA(move dragontoothmg.Move, bitboardsOwn dragontoothmg.Bitboards, bitboardsOpponent dragontoothmg.Bitboards) (score int) {
 	pieceTypeFrom, _ := getPieceTypeAtPosition(move.From(), bitboardsOwn)
 	pieceTypeTo, _ := getPieceTypeAtPosition(move.To(), bitboardsOpponent)
@@ -12,14 +17,15 @@ func (s *Search) getCaptureMVVLVA(move dragontoothmg.Move, bitboardsOwn dragonto
 	return (1200 - s.evaluationProvider.GetPieceTypeValue(pieceTypeTo)) + int(pieceTypeFrom)
 }
 
-// TODO: No en_passent_rules checked yet!
 func isCaptureOrPromotionMove(game *game.Game, move dragontoothmg.Move) bool {
+	bitboardsOwn := game.Position.White
 	bitboardsOpponent := game.Position.Black
 	if !game.Position.Wtomove {
+		bitboardsOwn = game.Position.Black
 		bitboardsOpponent = game.Position.White
 	}
 
-	return bitboardsOpponent.All&(1<<move.To()) > 0 || move.Promote() > 0
+	return bitboardsOpponent.All&(1<<move.To()) > 0 || move.Promote() > 0 || (bitboardsOwn.Pawns&(1<<move.From()) > 0 && game.GetEnPassentSquare() == move.To())
 }
 
 func getPieceTypeAtPosition(position uint8, bitboards dragontoothmg.Bitboards) (pieceType dragontoothmg.Piece, occupied bool) {
