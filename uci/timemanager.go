@@ -27,6 +27,12 @@ type UciTimingInfo struct {
 func NewTimingInfo(messageParts []string) (timingInfo *UciTimingInfo) {
 	timingInfo = &UciTimingInfo{
 		StartTimestamp: time.Now(),
+		TimeWhite:      -1,
+		TimeBlack:      -1,
+		IncrementWhite: -1,
+		IncrementBlack: -1,
+		MovesToGo:      -1,
+		MoveTime:       -1,
 	}
 	for i, token := range messageParts {
 		switch token {
@@ -48,7 +54,7 @@ func NewTimingInfo(messageParts []string) (timingInfo *UciTimingInfo) {
 }
 
 func (timingInfo *UciTimingInfo) calculateTimeoutContext(ctx context.Context, g *game.Game, options []UciOption) (context.Context, func()) {
-	if timingInfo.MoveTime > 0 {
+	if timingInfo.MoveTime >= 0 {
 		return context.WithDeadline(ctx, timingInfo.StartTimestamp.Add(time.Duration(timingInfo.MoveTime*int(time.Millisecond))))
 	}
 
@@ -62,11 +68,11 @@ func (timingInfo *UciTimingInfo) calculateTimeoutContext(ctx context.Context, g 
 		}
 	}
 
-	if timingInfo.MovesToGo > 0 && timingInfo.IncrementWhite <= 0 && timingInfo.IncrementBlack <= 0 && timingInfo.TimeWhite > 0 && timingInfo.TimeBlack > 0 {
+	if timingInfo.MovesToGo >= 0 && timingInfo.IncrementWhite < 0 && timingInfo.IncrementBlack < 0 && timingInfo.TimeWhite >= 0 && timingInfo.TimeBlack >= 0 {
 		return timingInfo.calculateTimeoutContextMPSTC(ctx, g, options)
 	}
 
-	if timingInfo.MovesToGo <= 0 && timingInfo.IncrementWhite > 0 && timingInfo.IncrementBlack > 0 && timingInfo.TimeWhite > 0 && timingInfo.TimeBlack > 0 {
+	if timingInfo.MovesToGo < 0 && timingInfo.IncrementWhite >= 0 && timingInfo.IncrementBlack >= 0 && timingInfo.TimeWhite >= 0 && timingInfo.TimeBlack >= 0 {
 		return timingInfo.calculateTimeoutContextFisherTC(ctx, g, options)
 	}
 
