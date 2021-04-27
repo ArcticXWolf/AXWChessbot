@@ -37,7 +37,8 @@ implemented.
     * Tempo evaluation
     * Pair bonus
     * Rook on (half-)open files bonus
-    * Passed pawn bonus
+    * Passed pawn evaluation
+    * Mobility evaluation
 * Simple search algorithm using
     * Negamax with alpha-beta-pruning
     * Quiescence search
@@ -62,6 +63,7 @@ implemented.
 * [chess-ai](https://github.com/xtreemtg/Chess_AI)
 * [sunfish](https://github.com/thomasahle/sunfish)
 * [Adam Berent Blog](https://adamberent.com/2019/03/02/chess-board-evaluation/)
+* [Dragontooth](https://github.com/dylhunn/dragontooth)
 * [Dragontoothmg](https://github.com/dylhunn/dragontoothmg)
 * [CounterGo](https://github.com/ChizhovVadim/CounterGo)
 * Several blogposts/stackoverflow questions found via Google

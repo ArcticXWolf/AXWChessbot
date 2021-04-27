@@ -15,6 +15,8 @@ type AdditionalModifier struct {
 	KingShieldRank2Modifier   int
 	KingShieldRank3Modifier   int
 	RookBlockedByKingModifier int
+	DiagonalMobilityModifier  int
+	LinearMobilityModifier    int
 }
 
 type GamephaseWeights struct {
@@ -40,6 +42,8 @@ var (
 		KingShieldRank2Modifier:   10,
 		KingShieldRank3Modifier:   5,
 		RookBlockedByKingModifier: 24,
+		DiagonalMobilityModifier:  2,
+		LinearMobilityModifier:    4,
 	}
 	weightsForAllPhases = GamephaseWeights{
 		Material: map[dragontoothmg.Piece]int{

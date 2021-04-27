@@ -305,3 +305,27 @@ func Test_calculatePassedPawns(t *testing.T) {
 		})
 	}
 }
+
+func Test_calculateMobilityModifier(t *testing.T) {
+	type args struct {
+		g     *game.Game
+		color game.PlayerColor
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{"GameStart White", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.White}, 0},
+		{"GameStart Black", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"), game.Black}, 0},
+		{"OpenBishop White", args{game.NewFromFen("rnbqkbnr/pppppppp/8/8/6P1/8/PPPPPP1P/RNBQKBNR b KQkq - 0 1"), game.White}, 4},
+		{"OpenRook Black", args{game.NewFromFen("rnbqkbnr/ppppppp1/8/7p/6P1/8/PPPPPP1P/RNBQKBNR w KQkq - 0 2"), game.Black}, 8},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := calculateMobilityModifier(tt.args.g, tt.args.color); got != tt.want {
+				t.Errorf("calculateMobilityModifier() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

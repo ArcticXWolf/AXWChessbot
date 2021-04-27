@@ -18,6 +18,7 @@ type EvaluationPart struct {
 	BlockedPiecesModifier   int
 	KingShieldModifier      int
 	PassedPawnModifier      int
+	MobilityModifier        int
 }
 
 type Evaluation struct {
@@ -86,6 +87,8 @@ func (e *Evaluation) updateTotal() {
 	e.TotalScore -= e.Black.KingShieldModifier
 	e.TotalScore += e.White.PassedPawnModifier
 	e.TotalScore -= e.Black.PassedPawnModifier
+	e.TotalScore += e.White.MobilityModifier
+	e.TotalScore -= e.Black.MobilityModifier
 
 	e.TotalScorePerspective = e.TotalScore
 	if !e.Game.Position.Wtomove {
@@ -104,6 +107,7 @@ func calculateEvaluationPart(g *game.Game, color game.PlayerColor) EvaluationPar
 		TempoModifier:           calculateTempoModifier(g, color),
 		RookFileModifier:        calculateRookModifier(g, color),
 		PassedPawnModifier:      calculatePassedPawns(g, color),
+		MobilityModifier:        calculateMobilityModifier(g, color),
 	}
 	return evalPart
 }
@@ -160,6 +164,8 @@ func getBitboardByPieceType(bbs *dragontoothmg.Bitboards, pieceType dragontoothm
 func calculateMaterialScoreForPieceType(g *game.Game, color game.PlayerColor, pieceType dragontoothmg.Piece, bitboard uint64) (int, int, int) {
 	var x uint64
 	ps, pstMid, pstEnd := 0, 0, 0
+
+	// Thanks to https://github.com/dylhunn/dragontooth for the extract pieces from bitboard pattern
 	for x = bitboard; x != 0; x &= x - 1 {
 		square := bits.TrailingZeros64(x)
 
@@ -240,5 +246,45 @@ func calculatePassedPawns(g *game.Game, color game.PlayerColor) (result int) {
 		square := bits.TrailingZeros64(x)
 		result += weights[color].Midgame.PassedPawnModifier[square]
 	}
+	return
+}
+
+func calculateMobilityModifier(g *game.Game, color game.PlayerColor) (result int) {
+	return calculateDiagonalMobilityModifier(g, color) + calculateLinearMobilityModifier(g, color)
+}
+
+func calculateDiagonalMobilityModifier(g *game.Game, color game.PlayerColor) (result int) {
+	diagonalBB := g.Position.White.Bishops | g.Position.White.Queens
+	ownBB := g.Position.White.All
+	if color == game.Black {
+		diagonalBB = g.Position.Black.Bishops | g.Position.Black.Queens
+		ownBB = g.Position.Black.All
+	}
+	allBB := g.Position.White.All | g.Position.Black.All
+
+	for x := diagonalBB; x != 0; x &= x - 1 {
+		square := bits.TrailingZeros64(x)
+		movableSquares := dragontoothmg.CalculateBishopMoveBitboard(uint8(square), allBB) & ^ownBB
+		result += bits.OnesCount64(movableSquares) * weights[color].AdditionalModifier.DiagonalMobilityModifier
+	}
+
+	return
+}
+
+func calculateLinearMobilityModifier(g *game.Game, color game.PlayerColor) (result int) {
+	linearBB := g.Position.White.Rooks | g.Position.White.Queens
+	ownBB := g.Position.White.All
+	if color == game.Black {
+		linearBB = g.Position.Black.Rooks | g.Position.Black.Queens
+		ownBB = g.Position.Black.All
+	}
+	allBB := g.Position.White.All | g.Position.Black.All
+
+	for x := linearBB; x != 0; x &= x - 1 {
+		square := bits.TrailingZeros64(x)
+		movableSquares := dragontoothmg.CalculateRookMoveBitboard(uint8(square), allBB) & ^ownBB
+		result += bits.OnesCount64(movableSquares) * weights[color].AdditionalModifier.LinearMobilityModifier
+	}
+
 	return
 }
