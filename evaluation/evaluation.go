@@ -16,7 +16,7 @@ type EvaluationPart struct {
 	TempoModifier           int
 	RookFileModifier        int
 	BlockedPiecesModifier   int
-	KingShieldModifier      int
+	KingSafetyModifier      int
 	PassedPawnModifier      int
 	MobilityModifier        int
 }
@@ -83,8 +83,8 @@ func (e *Evaluation) updateTotal() {
 	e.TotalScore -= e.Black.RookFileModifier
 	e.TotalScore += e.White.BlockedPiecesModifier
 	e.TotalScore -= e.Black.BlockedPiecesModifier
-	e.TotalScore += e.White.KingShieldModifier
-	e.TotalScore -= e.Black.KingShieldModifier
+	e.TotalScore += e.White.KingSafetyModifier
+	e.TotalScore -= e.Black.KingSafetyModifier
 	e.TotalScore += e.White.PassedPawnModifier
 	e.TotalScore -= e.Black.PassedPawnModifier
 	e.TotalScore += e.White.MobilityModifier
@@ -108,6 +108,7 @@ func calculateEvaluationPart(g *game.Game, color game.PlayerColor) EvaluationPar
 		RookFileModifier:        calculateRookModifier(g, color),
 		PassedPawnModifier:      calculatePassedPawns(g, color),
 		MobilityModifier:        calculateMobilityModifier(g, color),
+		KingSafetyModifier:      calculateKingSafety(g, color),
 	}
 	return evalPart
 }
@@ -287,4 +288,45 @@ func calculateLinearMobilityModifier(g *game.Game, color game.PlayerColor) (resu
 	}
 
 	return
+}
+
+func calculateKingSafety(g *game.Game, color game.PlayerColor) (result int) {
+	attackUnitCounts := 0
+	kingZoneBB := g.Position.White.Kings
+	linearAttackersBB := g.Position.Black.Rooks | g.Position.Black.Queens
+	diagonalAttackersBB := g.Position.Black.Bishops | g.Position.Black.Queens
+	ownBB := g.Position.White.All
+	if color == game.Black {
+		kingZoneBB = g.Position.Black.Kings
+		linearAttackersBB = g.Position.White.Rooks | g.Position.White.Queens
+		diagonalAttackersBB = g.Position.White.Bishops | g.Position.White.Queens
+		ownBB = g.Position.Black.All
+	}
+	allBB := g.Position.White.All | g.Position.Black.All
+
+	// up + down
+	kingZoneBB = kingZoneBB | (kingZoneBB << 8) | (kingZoneBB >> 8)
+	// left + right <- This also includes the up+down squares of above
+	kingZoneBB = kingZoneBB | ((kingZoneBB & ^bitboardFileA) >> 1) | ((kingZoneBB & ^bitboardFileH) << 1)
+
+	for x := linearAttackersBB; x != 0; x &= x - 1 {
+		square := bits.TrailingZeros64(x)
+		movableSquares := dragontoothmg.CalculateRookMoveBitboard(uint8(square), allBB) & ^ownBB
+		if movableSquares&kingZoneBB != 0 {
+			attackUnitCounts += weights[color].AdditionalModifier.LinearAttackUnit
+		}
+	}
+	for x := diagonalAttackersBB; x != 0; x &= x - 1 {
+		square := bits.TrailingZeros64(x)
+		movableSquares := dragontoothmg.CalculateBishopMoveBitboard(uint8(square), allBB) & ^ownBB
+		if movableSquares&kingZoneBB != 0 {
+			attackUnitCounts += weights[color].AdditionalModifier.DiagonalAttackUnit
+		}
+	}
+
+	if attackUnitCounts >= len(weights[color].AdditionalModifier.KingSafetyTable) {
+		return weights[color].AdditionalModifier.KingSafetyTable[len(weights[color].AdditionalModifier.KingSafetyTable)-1]
+	}
+
+	return -weights[color].AdditionalModifier.KingSafetyTable[attackUnitCounts]
 }
