@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dylhunn/dragontoothmg"
+	"go.janniklasrichter.de/axwchessbot/bench"
 	"go.janniklasrichter.de/axwchessbot/evaluation"
 	"go.janniklasrichter.de/axwchessbot/game"
 	"go.janniklasrichter.de/axwchessbot/search"
@@ -65,6 +66,8 @@ func (p *UciProtocol) HandleInput(message string) error {
 		return p.positionCmd(messageParts)
 	case "go":
 		return p.goCmd(messageParts)
+	case "perft":
+		return p.runPerft()
 	case "ucinewgame":
 		return p.uciNewGameCmd(messageParts)
 	default:
@@ -210,4 +213,18 @@ func (p *UciProtocol) SendInfo(depth, score, nodes, nps int, time time.Duration,
 	}
 	infoStr += "\n"
 	fmt.Print(infoStr)
+}
+
+func (p *UciProtocol) runPerft() error {
+	var nodes int
+	var nps float64
+	var start time.Time
+
+	fmt.Print("Perft started")
+	start = time.Now()
+	nodes = bench.RunPerft(game.New(), 6)
+	nps = float64(nodes) / float64(time.Since(start).Seconds())
+	fmt.Printf("Perft done nodes %d nps %f", nodes, nps)
+
+	return nil
 }

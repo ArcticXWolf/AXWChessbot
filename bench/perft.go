@@ -2,7 +2,7 @@ package bench
 
 import "go.janniklasrichter.de/axwchessbot/game"
 
-func runPerft(g *game.Game, depthLeft int) int {
+func RunPerft(g *game.Game, depthLeft int) int {
 	if depthLeft <= 0 {
 		return 1
 	}
@@ -16,7 +16,7 @@ func runPerft(g *game.Game, depthLeft int) int {
 	var count int
 	for _, move := range valid_moves {
 		g.PushMove(move)
-		count += runPerft(g, depthLeft-1)
+		count += RunPerft(g, depthLeft-1)
 		g.PopMove()
 	}
 

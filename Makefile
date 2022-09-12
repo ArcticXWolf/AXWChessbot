@@ -19,6 +19,10 @@ profile: clean
 	go tool pprof --svg build/test.bin build/mem.out > build/mem.svg
 	go tool pprof --svg build/test.bin build/cpu.out > build/cpu.svg
 
+perft: clean
+	mkdir build
+	go test -count=10 -run=^$$ -bench "^(Benchmark_runPerft[4-5])$$" -o build/test.bin go.janniklasrichter.de/axwchessbot/bench
+
 clean:
 	rm -rf build/
 

@@ -25,7 +25,7 @@ func Test_runPerft(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := runPerft(tt.args.g, tt.args.depthLeft); got != tt.want {
+			if got := RunPerft(tt.args.g, tt.args.depthLeft); got != tt.want {
 				t.Errorf("runPerft() = %v, want %v", got, tt.want)
 			}
 		})
@@ -39,7 +39,7 @@ func benchmarkRunPerft(i int, b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		start = time.Now()
-		nodes = runPerft(game.New(), i)
+		nodes = RunPerft(game.New(), i)
 		nps += float64(nodes) / float64(time.Since(start).Seconds())
 	}
 
